@@ -5,6 +5,7 @@ import { api } from '../api.js';
 import { store } from '../store.js';
 import { scanner } from '../scanner.js';
 import { lookupBarcode } from '../barcode-lookup.js';
+import { removeFromShoppingListIfNeeded } from './shopping.js';
 import {
   renderPage, setHeader, showToast, showModal, closeModal,
   formatAmount, getProductEmoji, escapeHtml, dateFromNow, todayStr,
@@ -237,6 +238,7 @@ async function handleKnownProduct(barcode, productData) {
         const date = document.getElementById('scan-date')?.value || todayStr();
         try {
           await api.addProductToStock(product.id, amount, date);
+          removeFromShoppingListIfNeeded(product.id, amount);
           showToast(`Added ${formatAmount(amount)} × ${product.name}`, 'success');
           clearScanResult();
         } catch (err) {

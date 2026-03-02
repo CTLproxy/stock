@@ -3,6 +3,7 @@
  */
 import { api } from '../api.js';
 import { store } from '../store.js';
+import { removeFromShoppingListIfNeeded } from './shopping.js';
 import {
   renderPage, setHeader, showToast, showModal, closeModal,
   formatDate, formatDateFull, formatAmount, formatPrice,
@@ -342,6 +343,7 @@ function setupStepperAndConfirm(action) {
           const price = document.getElementById('modal-price')?.value;
           const locationId = document.getElementById('modal-location')?.value;
           await api.addProductToStock(_product.id, amount, date, price ? parseFloat(price) : undefined, locationId ? parseInt(locationId) : undefined);
+          removeFromShoppingListIfNeeded(_product.id, amount);
           showToast(`Added ${formatAmount(amount)} to stock`, 'success');
           break;
         }
