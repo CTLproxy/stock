@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Grocy Stock">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="description" content="Modern Grocy client for managing your groceries">
+
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+
+  <title>Grocy Stock</title>
+
+  <style>
+    /* Inline critical styles for loading screen — prevents FOUC */
+    :root { --color-bg: #0d0d1a; --color-text: #f0f0f5; }
+    body { margin: 0; background: var(--color-bg); color: var(--color-text); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; }
+    .loading-screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--color-bg); z-index: 9999; transition: opacity 0.4s ease; }
+    .loading-content { text-align: center; }
+    .loading-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin: 0 0 8px; }
+    .loading-subtitle { font-size: 15px; opacity: 0.5; margin: 0; }
+    .loading-icon { margin-bottom: 24px; animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.8; } }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- App Shell -->
+    <div id="loading-screen" class="loading-screen">
+      <div class="loading-content">
+        <div class="loading-icon">
+          <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+            <rect width="80" height="80" rx="18" fill="url(#grad)"/>
+            <path d="M24 52V32c0-2.2 1.8-4 4-4h24c2.2 0 4 1.8 4 4v20c0 2.2-1.8 4-4 4H28c-2.2 0-4-1.8-4-4z" stroke="white" stroke-width="2.5" fill="none"/>
+            <path d="M32 28v-4c0-2.2 1.8-4 4-4h8c2.2 0 4 1.8 4 4v4" stroke="white" stroke-width="2.5" fill="none"/>
+            <circle cx="40" cy="42" r="4" stroke="white" stroke-width="2.5" fill="none"/>
+            <defs>
+              <linearGradient id="grad" x1="0" y1="0" x2="80" y2="80">
+                <stop offset="0%" stop-color="#34C759"/>
+                <stop offset="100%" stop-color="#30D158"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h1 class="loading-title">Grocy Stock</h1>
+        <p class="loading-subtitle">Loading your pantry...</p>
+      </div>
+    </div>
+
+    <!-- Connectivity Banner -->
+    <div id="connection-bar" class="connection-bar" style="display:none;"></div>
+
+    <!-- Main App Container -->
+    <div id="app-container" class="app-container" style="display:none;">
+      <!-- Header -->
+      <header id="app-header" class="app-header">
+        <div class="header-content">
+          <button id="header-back" class="header-btn back-btn" style="display:none;" aria-label="Go back">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <h1 id="header-title" class="header-title">Dashboard</h1>
+          <button id="header-action" class="header-btn action-btn" style="display:none;" aria-label="Action">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Page Container -->
+      <main id="page-container" class="page-container"></main>
+
+      <!-- Bottom Navigation -->
+      <nav id="bottom-nav" class="bottom-nav">
+        <button class="nav-item" data-route="/">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <span>Home</span>
+        </button>
+        <button class="nav-item" data-route="/stock">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 0 1-8 0"/>
+          </svg>
+          <span>Stock</span>
+        </button>
+        <button class="nav-item scan-btn" data-route="/scan">
+          <div class="scan-btn-inner">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+          </div>
+          <span>Scan</span>
+        </button>
+        <button class="nav-item" data-route="/shopping">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+          </svg>
+          <span>Shopping</span>
+        </button>
+        <button class="nav-item" data-route="/settings">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span>Settings</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Modal Container -->
+    <div id="modal-overlay" class="modal-overlay" style="display:none;">
+      <div id="modal-content" class="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- Failsafe: remove loading screen even if module fails to load -->
+  <script>
+    window.__bootTimeout = setTimeout(function() {
+      var ls = document.getElementById('loading-screen');
+      var ac = document.getElementById('app-container');
+      if (ls) { ls.style.opacity = '0'; ls.style.pointerEvents = 'none'; setTimeout(function() { ls.remove(); }, 400); }
+      if (ac) ac.style.display = 'flex';
+    }, 4000);
+  </script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
