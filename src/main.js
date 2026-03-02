@@ -15,6 +15,7 @@ import { renderProductDetail } from './js/pages/product-detail.js';
 import { renderScanPage, cleanupScanPage } from './js/pages/scan.js';
 import { renderShopping } from './js/pages/shopping.js';
 import { renderSettings } from './js/pages/settings.js';
+import { initPullToRefresh } from './js/pull-to-refresh.js';
 
 /* ---------- Boot ---------- */
 
@@ -82,6 +83,7 @@ async function boot() {
 
   // Show the app UI immediately
   dismissLoading();
+  initPullToRefresh();
 
   // If no server configured, send to settings
   if (!isConfigured) {
@@ -203,7 +205,7 @@ function setupConnectivityBanner() {
 }
 
 /* ---------- Service Worker ---------- */
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   window.addEventListener('load', async () => {
     try {
       const reg = await navigator.serviceWorker.register('./sw.js');

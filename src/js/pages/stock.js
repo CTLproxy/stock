@@ -7,6 +7,7 @@ import {
   renderPage, setHeader, showToast, formatDate, formatAmount,
   getProductEmoji, escapeHtml, getDueBadgeClass, debounce,
 } from '../ui.js';
+import { setRefreshHandler } from '../pull-to-refresh.js';
 
 export function renderStock() {
   setHeader('Stock', false);
@@ -40,6 +41,7 @@ export function renderStock() {
 
   loadStockData();
   setupStockListeners();
+  setRefreshHandler(loadStockData);
 }
 
 let _allStock = [];

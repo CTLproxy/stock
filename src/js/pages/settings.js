@@ -492,15 +492,27 @@ function setupSettingsListeners() {
 
   // Update SW
   document.getElementById('settings-refresh-sw')?.addEventListener('click', async () => {
-    if ('serviceWorker' in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      for (const reg of registrations) {
-        await reg.update();
+    try {
+      if ('serviceWorker' in navigator && navigator.serviceWorker) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        if (registrations.length) {
+          for (const reg of registrations) await reg.update();
+          showToast('Checking for updates…', 'info');
+          return;
+        }
       }
-      showToast('Checking for updates…', 'info');
-    } else {
-      showToast('Service workers not supported', 'warning');
-    }
+    } catch (_) { /* SW not available (HTTP) — fall through */ }
+
+    // Fallback: clear caches if available, then hard-reload
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+    } catch (_) { /* ignore */ }
+
+    showToast('Reloading app…', 'info');
+    setTimeout(() => window.location.reload(), 400);
   });
 }
 

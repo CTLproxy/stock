@@ -16,6 +16,7 @@ import {
   getProductEmoji, escapeHtml, debounce, formatAmount,
   dateFromNow, todayStr,
 } from '../ui.js';
+import { setRefreshHandler } from '../pull-to-refresh.js';
 
 let _shoppingItems = [];
 let _products = [];
@@ -76,6 +77,7 @@ export function renderShopping() {
 
   loadShoppingData();
   setupShoppingListeners();
+  setRefreshHandler(loadShoppingData);
 }
 
 /* ================================================================
@@ -241,7 +243,7 @@ function renderShoppingList() {
           Delete
         </div>
         <div class="shopping-item${ordered ? ' ordered' : ''}${isSelected ? ' selected' : ''}" data-item-id="${item.id}" data-product-id="${item.product_id || ''}">
-          <div class="select-check${isSelected ? ' checked' : ''}" style="${_selectMode ? 'display:flex;' : ''}">
+          <div class="select-check${isSelected ? ' checked' : ''}">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
           <div class="product-icon" style="font-size: 18px;">${emoji}</div>
@@ -268,8 +270,8 @@ function renderShoppingList() {
     `;
   }).join('');
 
-  // Keep select mode active on re-render
-  if (_selectMode) listEl.classList.add('select-mode-active');
+  // Keep select mode class in sync on re-render
+  listEl.classList.toggle('select-mode-active', _selectMode);
 
   attachItemListeners(listEl, productMap, quMap);
 }

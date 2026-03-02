@@ -7,6 +7,7 @@ import {
   renderPage, setHeader, showToast, getProductEmoji,
   escapeHtml, debounce,
 } from '../ui.js';
+import { setRefreshHandler } from '../pull-to-refresh.js';
 
 export function renderProducts() {
   setHeader('Products', false,
@@ -39,6 +40,7 @@ export function renderProducts() {
   `);
 
   loadProductsData();
+  setRefreshHandler(loadProductsData);
 }
 
 let _allProducts = [];

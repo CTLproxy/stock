@@ -141,12 +141,15 @@ html {
   text-size-adjust: 100%;
   overflow: hidden;
   height: 100%;
+  height: 100dvh;
+  background: #0a0a0a;
   background: var(--color-bg);
   color: var(--color-text);
 }
 
 body {
   height: 100%;
+  height: 100dvh;
   overflow: hidden;
   background: var(--color-bg);
   position: relative;
@@ -170,6 +173,7 @@ body::before {
 
 #app {
   height: 100%;
+  height: 100dvh;
   width: 100%;
   position: relative;
   z-index: 1;
@@ -245,6 +249,7 @@ input, select, textarea {
 /* --- App Container --- */
 .app-container {
   height: 100%;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -755,6 +760,48 @@ input, select, textarea {
   font-weight: 700;
   min-width: 50px;
   text-align: center;
+}
+
+/* --- Pull-to-Refresh --- */
+.ptr-indicator {
+  position: fixed;
+  top: calc(var(--safe-area-top) + var(--header-height) - 44px);
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 90;
+  opacity: 0;
+  transform: translateY(0);
+  transition: transform 0.25s var(--ease-spring), opacity 0.2s;
+  pointer-events: none;
+}
+
+.ptr-spinner {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-elevated);
+  border: 0.5px solid var(--color-glass-border);
+  box-shadow: var(--shadow-md);
+  color: var(--color-text-secondary);
+  transition: transform 0.15s ease;
+}
+
+.ptr-ready .ptr-spinner {
+  color: var(--color-accent);
+}
+
+.ptr-refreshing .ptr-spinner {
+  animation: ptr-spin 0.8s linear infinite;
+  color: var(--color-accent);
+}
+
+@keyframes ptr-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* --- Toast --- */

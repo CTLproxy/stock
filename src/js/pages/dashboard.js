@@ -8,6 +8,7 @@ import {
   renderPage, setHeader, showToast, formatDate, formatAmount,
   getProductEmoji, escapeHtml, getDueBadgeClass,
 } from '../ui.js';
+import { setRefreshHandler } from '../pull-to-refresh.js';
 
 export function renderDashboard() {
   setHeader('Dashboard', false);
@@ -88,6 +89,7 @@ export function renderDashboard() {
   `);
 
   loadDashboardData();
+  setRefreshHandler(loadDashboardData);
 }
 
 async function loadDashboardData() {

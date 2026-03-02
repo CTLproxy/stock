@@ -9,6 +9,7 @@ import {
   formatDate, formatDateFull, formatAmount, formatPrice,
   getProductEmoji, escapeHtml, getDueBadgeClass, todayStr, dateFromNow,
 } from '../ui.js';
+import { setRefreshHandler } from '../pull-to-refresh.js';
 
 let _product = null;
 let _stockEntries = [];
@@ -42,6 +43,7 @@ export async function renderProductDetail(params) {
 
     setHeader(escapeHtml(_product.name), true);
     renderDetailPage();
+    setRefreshHandler(() => renderProductDetail(params));
   } catch (e) {
     showToast('Failed to load product', 'error');
     renderPage(`<div class="empty-state"><div class="empty-state-title">Error loading product</div><div class="empty-state-text">${escapeHtml(e.message)}</div></div>`);
