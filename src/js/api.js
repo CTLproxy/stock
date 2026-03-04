@@ -230,11 +230,6 @@ class GrocyAPI {
       return this._ingressSession;
     }
 
-    // If already running inside HA ingress, reuse current browser ingress path
-    if (this._adoptCurrentIngressContext()) {
-      return this._ingressSession;
-    }
-
     // Deduplicate concurrent callers
     if (this._sessionPromise) return this._sessionPromise;
 

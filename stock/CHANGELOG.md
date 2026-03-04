@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.13
+
+- Fix HA ingress runtime API routing: stop reusing current browser ingress path for normal API calls
+- Prevent `index.html` (`<!DOCTYPE ...>`) responses being parsed as Grocy API JSON on other screens
+
 ## 1.0.12
 
 - Disable and unregister Service Worker when app runs inside HA ingress context
