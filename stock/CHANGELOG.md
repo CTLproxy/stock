@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.10
+
+- Accept HA ingress connection test when probe confirms `/api/system/info` returns 200
+- Fix internal proxy upstream hostname to docker-safe Grocy add-on host format
+- Update Settings About version label
+
 ## 1.0.9
 
 - Add HA Ingress section action to switch directly to Direct mode + internal Grocy proxy URL

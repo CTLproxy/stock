@@ -517,6 +517,11 @@ class GrocyAPI {
             probeResults.push(`${pp} → ERR: ${pe.message}`);
           }
         }
+        const probeApi200 = probeResults.some((r) => r.startsWith('/api/system/info') && r.includes('→ 200'));
+        if (probeApi200) {
+          onStep(4, 'ok', 'Grocy responding (verified by probe)');
+          return { success: true, slug, version: '?' };
+        }
         const diag = `base=${probeBase}, probes: ${probeResults.join('; ')}`;
         console.error(`[api] Grocy ingress probe:`, diag);
         onStep(4, 'error', `Grocy error: ${e.message}`);
