@@ -17,5 +17,9 @@ panel_icon: mdi:cart
 panel_title: Stock
 hassio_api: true
 homeassistant_api: true
+ports:
+  80/tcp: 8099
+ports_description:
+  80/tcp: Stock PWA web interface (optional, ingress works without this)
 options: {}
 schema: {}

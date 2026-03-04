@@ -17,3 +17,6 @@ RUN apk add --no-cache nginx
 COPY --from=builder /app/dist /var/www/html
 COPY nginx.conf /etc/nginx/http.d/default.conf
 COPY rootfs /
+
+RUN chmod a+x /etc/services.d/nginx/run \
+ && chmod a+x /etc/cont-init.d/init.sh
