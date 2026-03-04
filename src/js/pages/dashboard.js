@@ -152,43 +152,117 @@ function renderStats(stock, volatile) {
   statsEl.innerHTML = `
     <div class="stat-card" onclick="location.hash='/stock'">
       <div class="stat-icon green">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
           <line x1="3" y1="6" x2="21" y2="6"/>
         </svg>
       </div>
-      <span class="stat-value">${totalProducts}</span>
       <span class="stat-label">In Stock</span>
+      <span class="stat-value">${totalProducts}</span>
     </div>
     <div class="stat-card" onclick="location.hash='/stock?filter=due'">
       <div class="stat-icon orange">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
         </svg>
       </div>
+      <span class="stat-label">Expiring</span>
       <span class="stat-value">${expiringSoon}</span>
-      <span class="stat-label">Expiring Soon</span>
     </div>
     <div class="stat-card" onclick="location.hash='/stock?filter=expired'">
       <div class="stat-icon red">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
         </svg>
       </div>
-      <span class="stat-value">${expired}</span>
       <span class="stat-label">Expired</span>
+      <span class="stat-value">${expired}</span>
     </div>
     <div class="stat-card" onclick="location.hash='/stock?filter=missing'">
       <div class="stat-icon yellow">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
           <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
       </div>
-      <span class="stat-value">${missing}</span>
       <span class="stat-label">Below Min.</span>
+      <span class="stat-value">${missing}</span>
     </div>
   `;
+
+  // Chore widgets (if enabled in settings)
+  if (store.get('dashboardShowChores')) {
+    loadChoreWidgets();
+  }
+}
+
+async function loadChoreWidgets() {
+  const statsEl = document.getElementById('dash-stats');
+  if (!statsEl) return;
+
+  try {
+    const chores = await api.getChores();
+    const periodicChores = chores.filter(c => c.period_type !== 'manually');
+
+    if (periodicChores.length === 0) return;
+
+    const details = await Promise.all(
+      periodicChores.map(c => api.getChoreDetails(c.id).catch(() => null))
+    );
+
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    let plannedCount = 0;
+    let missedCount = 0;
+
+    for (const d of details.filter(Boolean)) {
+      const next = d.next_estimated_execution_time;
+      if (!next) continue;
+      const dueDate = new Date(next);
+      const dueStr = `${dueDate.getFullYear()}-${String(dueDate.getMonth()+1).padStart(2,'0')}-${String(dueDate.getDate()).padStart(2,'0')}`;
+      if (dueStr < todayStr) missedCount++;
+      else if (dueStr === todayStr) plannedCount++;
+      else {
+        // Future: check if within 24 hours
+        const diffHours = (dueDate - now) / (1000 * 60 * 60);
+        if (diffHours <= 24) plannedCount++;
+      }
+    }
+
+    // Append chore widget cards to existing grid
+    const plannedCard = document.createElement('div');
+    plannedCard.className = 'stat-card';
+    plannedCard.onclick = () => { location.hash = '/chores'; };
+    plannedCard.innerHTML = `
+      <div class="stat-icon orange">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+          <polyline points="9 14 12 17 16 11"/>
+        </svg>
+      </div>
+      <span class="stat-label">Chores Due</span>
+      <span class="stat-value${plannedCount > 0 ? ' stat-value-orange' : ''}">${plannedCount}</span>
+    `;
+
+    const missedCard = document.createElement('div');
+    missedCard.className = 'stat-card';
+    missedCard.onclick = () => { location.hash = '/chores'; };
+    missedCard.innerHTML = `
+      <div class="stat-icon red">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+          <line x1="9" y1="11" x2="15" y2="17"/><line x1="15" y1="11" x2="9" y2="17"/>
+        </svg>
+      </div>
+      <span class="stat-label">Chores Missed</span>
+      <span class="stat-value${missedCount > 0 ? ' stat-value-red' : ''}">${missedCount}</span>
+    `;
+
+    statsEl.appendChild(plannedCard);
+    statsEl.appendChild(missedCard);
+  } catch { /* ignore - chores not available */ }
 }
 
 function renderProductList(items, containerId, isStock = true) {

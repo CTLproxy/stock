@@ -72,13 +72,14 @@ class GrocyAPI {
    * @param {string} haUrl  - e.g. http://192.168.50.5:8123
    * @param {string} haToken - HA Long-Lived Access Token
    * @param {string} addonSlug - Grocy add-on slug (e.g. "a0d7b954_grocy")
+   * @param {string} [grocyApiKey] - Grocy API key (required for API auth through ingress)
    */
-  configureHA(haUrl, haToken, addonSlug) {
+  configureHA(haUrl, haToken, addonSlug, grocyApiKey = '') {
     this.haUrl = haUrl.replace(/\/+$/, '');
     this.haToken = haToken;
     this.addonSlug = addonSlug;
     this.mode = 'ha_ingress';
-    this.apiKey = '';
+    this.apiKey = grocyApiKey || '';
     this._cache.clear();
     this._clearSession();
   }
@@ -253,6 +254,7 @@ class GrocyAPI {
         'Authorization': `Bearer ${this.haToken}`,
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: '{}',
     });
 
@@ -373,15 +375,17 @@ class GrocyAPI {
    *
    * Returns { success: true, slug, version } or throws.
    */
-  async testHAConnection(haUrl, haToken, onStep = () => {}) {
+  async testHAConnection(haUrl, haToken, onStep = () => {}, grocyApiKey = '') {
     // Temporarily set credentials for the test
     const prevHaUrl = this.haUrl;
     const prevHaToken = this.haToken;
     const prevAddonSlug = this.addonSlug;
     const prevMode = this.mode;
+    const prevApiKey = this.apiKey;
 
     this.haUrl = haUrl.replace(/\/+$/, '');
     this.haToken = haToken;
+    this.apiKey = grocyApiKey || '';
     this.mode = 'ha_ingress';
     this._haWsDisconnect(); // force a fresh WS for the test
 
@@ -432,7 +436,7 @@ class GrocyAPI {
         throw new Error(`Could not create ingress session for ${slug}: ${e.message}`);
       }
 
-      // Step 4 — Hit Grocy API through ingress (HTTP via dev proxy)
+      // Step 4 — Hit Grocy API through ingress
       onStep(4, 'pending', 'Connecting to Grocy…');
       try {
         const info = await this._request('GET', '/system/info');
@@ -440,8 +444,31 @@ class GrocyAPI {
         onStep(4, 'ok', `Grocy ${version} responding`);
         return { success: true, slug, version };
       } catch (e) {
+        // Probe common path variants to help diagnose
+        const probeBase = `${this.haUrl}${this._ingressEntry}`;
+        const probePaths = [
+          '/api/system/info',      // standard
+          '/system/info',          // no /api prefix
+          '/',                     // web root
+        ];
+        let probeResults = [];
+        for (const pp of probePaths) {
+          try {
+            const pUrl = this._proxyUrl(`${probeBase}${pp}`);
+            const pRes = await fetch(pUrl, {
+              headers: this._getHeaders(),
+              credentials: 'include',
+            });
+            probeResults.push(`${pp} → ${pRes.status}`);
+          } catch (pe) {
+            probeResults.push(`${pp} → ERR: ${pe.message}`);
+          }
+        }
+        const diag = `base=${probeBase}, probes: ${probeResults.join('; ')}`;
+        console.error(`[api] Grocy ingress probe:`, diag);
         onStep(4, 'error', `Grocy error: ${e.message}`);
-        throw new Error(`Ingress session works but Grocy did not respond: ${e.message}`);
+        onStep(5, 'error', `Debug: ${diag}`);
+        throw new Error(`Ingress session works but Grocy did not respond: ${e.message}. ${diag}`);
       }
     } finally {
       // Restore previous config
@@ -449,6 +476,7 @@ class GrocyAPI {
       this.haToken = prevHaToken;
       this.addonSlug = prevAddonSlug;
       this.mode = prevMode;
+      this.apiKey = prevApiKey;
       this._ingressSession = '';
       this._ingressEntry = '';
       this._sessionExpiry = 0;
@@ -461,11 +489,13 @@ class GrocyAPI {
 
   _getHeaders() {
     if (this.mode === 'ha_ingress') {
-      return {
+      const h = {
         'Authorization': `Bearer ${this.haToken}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       };
+      if (this.apiKey) h['GROCY-API-KEY'] = this.apiKey;
+      return h;
     }
     return {
       'GROCY-API-KEY': this.apiKey,
@@ -526,6 +556,11 @@ class GrocyAPI {
       method,
       headers: this._getHeaders(),
     };
+
+    // HA Ingress requires the ingress_session cookie
+    if (this.mode === 'ha_ingress') {
+      options.credentials = 'include';
+    }
 
     if (body && method !== 'GET') {
       options.body = JSON.stringify(body);
@@ -639,9 +674,11 @@ class GrocyAPI {
     return this._request('POST', `/stock/products/${productId}/inventory`, body);
   }
 
-  async openProduct(productId, amount = 1) {
+  async openProduct(productId, amount = 1, locationId = null) {
+    const body = { amount };
+    if (locationId) body.location_id = locationId;
     this.invalidateCache('/stock');
-    return this._request('POST', `/stock/products/${productId}/open`, { amount });
+    return this._request('POST', `/stock/products/${productId}/open`, body);
   }
 
   // --- Stock by Barcode ---
@@ -843,6 +880,71 @@ class GrocyAPI {
     return this.getObjects('quantity_unit_conversions_resolved');
   }
 
+  // --- Batteries ---
+  async getBatteries() {
+    return this.getObjects('batteries');
+  }
+
+  async getBatteryDetails(batteryId) {
+    return this._request('GET', `/batteries/${batteryId}`, null, true);
+  }
+
+  async chargeBattery(batteryId, trackedTime = null) {
+    const data = {};
+    if (trackedTime) data.tracked_time = trackedTime;
+    this.invalidateCache('/objects/batteries');
+    return this._request('POST', `/batteries/${batteryId}/charge`, data);
+  }
+
+  async getBatteryChargeLog(batteryId) {
+    return this.getObjects('battery_charge_cycle_entries', `query%5B%5D=battery_id%3D${batteryId}`);
+  }
+
+  async createBattery(data) {
+    return this.addObject('batteries', data);
+  }
+
+  async updateBattery(id, data) {
+    return this.editObject('batteries', id, data);
+  }
+
+  async deleteBattery(id) {
+    return this.deleteObject('batteries', id);
+  }
+
+  // --- Chores ---
+  async getChores() {
+    return this.getObjects('chores');
+  }
+
+  async getChoreDetails(choreId) {
+    return this._request('GET', `/chores/${choreId}`, null, true);
+  }
+
+  async trackChore(choreId, trackedTime = null, doneBy = null) {
+    const data = {};
+    if (trackedTime) data.tracked_time = trackedTime;
+    if (doneBy) data.done_by = doneBy;
+    this.invalidateCache('/objects/chores');
+    return this._request('POST', `/chores/${choreId}/execute`, data);
+  }
+
+  async getChoreLog(choreId) {
+    return this.getObjects('chores_log', `query%5B%5D=chore_id%3D${choreId}`);
+  }
+
+  async createChore(data) {
+    return this.addObject('chores', data);
+  }
+
+  async updateChore(id, data) {
+    return this.editObject('chores', id, data);
+  }
+
+  async deleteChore(id) {
+    return this.deleteObject('chores', id);
+  }
+
   // --- Tasks ---
   async getTasks() {
     return this._request('GET', '/tasks');
@@ -854,6 +956,182 @@ class GrocyAPI {
 
   async undoTask(taskId) {
     return this._request('POST', `/tasks/${taskId}/undo`);
+  }
+
+  // --- Equipment ---
+  async getEquipment() {
+    return this.getObjects('equipment');
+  }
+
+  async createEquipment(data) {
+    return this.addObject('equipment', data);
+  }
+
+  async updateEquipment(id, data) {
+    return this.editObject('equipment', id, data);
+  }
+
+  async deleteEquipment(id) {
+    return this.deleteObject('equipment', id);
+  }
+
+  // --- Recipes ---
+  async getRecipes() {
+    return this.getObjects('recipes');
+  }
+
+  async getRecipeDetails(recipeId) {
+    return this.getObjects('recipes_pos', `query%5B%5D=recipe_id%3D${recipeId}`);
+  }
+
+  async getRecipeFulfillment(recipeId) {
+    return this._request('GET', `/recipes/${recipeId}/fulfillment`, null, true);
+  }
+
+  async getAllRecipesFulfillment() {
+    return this._request('GET', '/recipes/fulfillment', null, true);
+  }
+
+  async addRecipesToMealPlan(recipeId, servings = 1) {
+    return this._request('POST', `/recipes/${recipeId}/add-not-fulfilled-products-to-shoppinglist`, { excludedProductIds: [] });
+  }
+
+  async consumeRecipe(recipeId) {
+    return this._request('POST', `/recipes/${recipeId}/consume`);
+  }
+
+  async createRecipe(data) {
+    return this.addObject('recipes', data);
+  }
+
+  async updateRecipe(id, data) {
+    return this.editObject('recipes', id, data);
+  }
+
+  async deleteRecipe(id) {
+    return this.deleteObject('recipes', id);
+  }
+
+  async createRecipeIngredient(data) {
+    return this.addObject('recipes_pos', data);
+  }
+
+  async updateRecipeIngredient(id, data) {
+    return this.editObject('recipes_pos', id, data);
+  }
+
+  async deleteRecipeIngredient(id) {
+    return this.deleteObject('recipes_pos', id);
+  }
+
+  // --- Master Data ---
+  async createLocation(data) {
+    return this.addObject('locations', data);
+  }
+
+  async updateLocation(id, data) {
+    return this.editObject('locations', id, data);
+  }
+
+  async deleteLocation(id) {
+    return this.deleteObject('locations', id);
+  }
+
+  async createQuantityUnit(data) {
+    return this.addObject('quantity_units', data);
+  }
+
+  async updateQuantityUnit(id, data) {
+    return this.editObject('quantity_units', id, data);
+  }
+
+  async deleteQuantityUnit(id) {
+    return this.deleteObject('quantity_units', id);
+  }
+
+  async createProductGroup(data) {
+    return this.addObject('product_groups', data);
+  }
+
+  async updateProductGroup(id, data) {
+    return this.editObject('product_groups', id, data);
+  }
+
+  async deleteProductGroup(id) {
+    return this.deleteObject('product_groups', id);
+  }
+
+  // --- File Upload ---
+  async uploadFile(group, fileName, fileBlob) {
+    if (this.mode === 'ha_ingress') {
+      await this._ensureIngressSession();
+    }
+    const encoded = btoa(unescape(encodeURIComponent(fileName)));
+    const rawUrl = `${this.baseUrl}/api/files/${group}/${encoded}`;
+    const url = this.mode === 'ha_ingress' ? this._proxyUrl(rawUrl) : rawUrl;
+    const headers = this.mode === 'ha_ingress'
+      ? { 'Authorization': `Bearer ${this.haToken}`, ...(this.apiKey ? { 'GROCY-API-KEY': this.apiKey } : {}) }
+      : { 'GROCY-API-KEY': this.apiKey };
+    headers['Content-Type'] = 'application/octet-stream';
+    headers['Accept'] = 'application/json';
+    const fetchOpts = { method: 'PUT', headers, body: fileBlob };
+    if (this.mode === 'ha_ingress') fetchOpts.credentials = 'include';
+    const res = await fetch(url, fetchOpts);
+    if (!res.ok) {
+      let msg = `Upload failed: ${res.status}`;
+      try { const d = await res.json(); msg = d.error_message || msg; } catch {}
+      throw new Error(msg);
+    }
+    return true;
+  }
+
+  async deleteFile(group, fileName) {
+    if (this.mode === 'ha_ingress') {
+      await this._ensureIngressSession();
+    }
+    const encoded = btoa(unescape(encodeURIComponent(fileName)));
+    const rawUrl = `${this.baseUrl}/api/files/${group}/${encoded}`;
+    const url = this.mode === 'ha_ingress' ? this._proxyUrl(rawUrl) : rawUrl;
+    const headers = this.mode === 'ha_ingress'
+      ? { 'Authorization': `Bearer ${this.haToken}`, ...(this.apiKey ? { 'GROCY-API-KEY': this.apiKey } : {}) }
+      : { 'GROCY-API-KEY': this.apiKey };
+    headers['Accept'] = 'application/json';
+    const delOpts = { method: 'DELETE', headers };
+    if (this.mode === 'ha_ingress') delOpts.credentials = 'include';
+    const res = await fetch(url, delOpts);
+    if (!res.ok && res.status !== 204 && res.status !== 404) {
+      throw new Error(`Delete file failed: ${res.status}`);
+    }
+    return true;
+  }
+
+  getFileUrl(group, fileName, forceAsPicture = false) {
+    if (!fileName) return null;
+    const encoded = btoa(unescape(encodeURIComponent(fileName)));
+    const qs = forceAsPicture ? '?force_serve_as=picture' : '';
+    const raw = `${this.baseUrl}/api/files/${group}/${encoded}${qs}`;
+    return this.mode === 'ha_ingress' ? this._proxyUrl(raw) : raw;
+  }
+
+  /**
+   * Fetch a file from Grocy with proper authentication and return a Blob.
+   * This is needed because <img src> / <a href> cannot send API key headers.
+   */
+  async fetchFileAsBlob(group, fileName) {
+    if (this.mode === 'ha_ingress') {
+      await this._ensureIngressSession();
+    }
+    const encoded = btoa(unescape(encodeURIComponent(fileName)));
+    const rawUrl = `${this.baseUrl}/api/files/${group}/${encoded}`;
+    const url = this.mode === 'ha_ingress' ? this._proxyUrl(rawUrl) : rawUrl;
+    const headers = this.mode === 'ha_ingress'
+      ? { 'Authorization': `Bearer ${this.haToken}`, ...(this.apiKey ? { 'GROCY-API-KEY': this.apiKey } : {}) }
+      : { 'GROCY-API-KEY': this.apiKey };
+    const blobOpts = { method: 'GET', headers };
+    if (this.mode === 'ha_ingress') blobOpts.credentials = 'include';
+    const res = await fetch(url, blobOpts);
+    if (!res.ok) throw new Error(`File fetch failed: ${res.status}`);
+    return res.blob();
   }
 
   // --- Test Connection ---

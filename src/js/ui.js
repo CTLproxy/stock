@@ -67,20 +67,75 @@ export function showModal(titleOrHtml, contentHtml, onClose) {
     if (onClose) onClose();
   };
 
-  // Swipe-down to close on the handle
-  const handle = content.querySelector('.modal-handle');
-  if (handle) {
-    let startY = 0;
-    handle.addEventListener('touchstart', (e) => {
-      startY = e.touches[0].clientY;
-    }, { passive: true });
-    handle.addEventListener('touchend', (e) => {
-      const endY = e.changedTouches[0].clientY;
-      if (endY - startY > 50) {
+  // Swipe-down to dismiss — works from anywhere on the modal sheet
+  setupModalSwipeToDismiss(content, overlay);
+}
+
+function setupModalSwipeToDismiss(content, overlay) {
+  let startY = 0;
+  let currentY = 0;
+  let isDragging = false;
+
+  const onTouchStart = (e) => {
+    // Only initiate drag if the content is scrolled to the top (or near top)
+    if (content.scrollTop > 5) return;
+    startY = e.touches[0].clientY;
+    currentY = startY;
+    isDragging = true;
+    content.style.transition = 'none';
+  };
+
+  const onTouchMove = (e) => {
+    if (!isDragging) return;
+    currentY = e.touches[0].clientY;
+    const deltaY = currentY - startY;
+
+    if (deltaY > 0) {
+      // Dragging down — apply rubber-band translateY
+      content.style.transform = `translateY(${deltaY}px)`;
+      // Dim overlay proportionally
+      const progress = Math.min(deltaY / 300, 1);
+      overlay.style.background = `rgba(0, 0, 0, ${0.5 * (1 - progress * 0.6)})`;
+    } else {
+      // Dragging up — reset
+      content.style.transform = '';
+    }
+  };
+
+  const onTouchEnd = () => {
+    if (!isDragging) return;
+    isDragging = false;
+    const deltaY = currentY - startY;
+
+    if (deltaY > 100) {
+      // Dismiss: animate out
+      content.style.transition = 'transform 0.25s cubic-bezier(0.2, 0, 0, 1)';
+      content.style.transform = 'translateY(100%)';
+      overlay.style.transition = 'background 0.25s ease';
+      overlay.style.background = 'rgba(0, 0, 0, 0)';
+      setTimeout(() => {
+        content.style.transition = '';
+        content.style.transform = '';
+        overlay.style.transition = '';
+        overlay.style.background = '';
         closeModal();
-      }
-    }, { passive: true });
-  }
+      }, 250);
+    } else {
+      // Snap back
+      content.style.transition = 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)';
+      content.style.transform = '';
+      overlay.style.transition = 'background 0.2s ease';
+      overlay.style.background = '';
+      setTimeout(() => {
+        content.style.transition = '';
+        overlay.style.transition = '';
+      }, 200);
+    }
+  };
+
+  content.addEventListener('touchstart', onTouchStart, { passive: true });
+  content.addEventListener('touchmove', onTouchMove, { passive: true });
+  content.addEventListener('touchend', onTouchEnd, { passive: true });
 }
 
 export function closeModal() {

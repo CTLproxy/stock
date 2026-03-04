@@ -258,6 +258,15 @@ function renderDetailsTab() {
           </div>
           <span class="quick-action-label">Inventory</span>
         </button>
+        <button class="quick-action" id="action-transfer"${totalAmount <= 0 ? ' disabled' : ''}>
+          <div class="quick-action-icon stat-icon teal">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+              <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+          </div>
+          <span class="quick-action-label">Transfer</span>
+        </button>
       </div>
     </div>
 
@@ -650,9 +659,19 @@ function setupActionButtons() {
 
   document.getElementById('action-consume')?.addEventListener('click', () => {
     const totalAmount = _stockEntries.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+    const locOptions = buildStockLocationOptions('amount');
+    const hasMultipleLocations = locOptions.length > 1;
     showModal('Consume', `
+      ${hasMultipleLocations ? `
       <div class="form-group">
-        <label class="form-label">Amount (max ${formatAmount(totalAmount)})</label>
+        <label class="form-label">Location</label>
+        <select id="modal-action-location" class="form-input">
+          <option value="">All locations (${formatAmount(totalAmount)})</option>
+          ${locOptions.map(l => `<option value="${l.id}">${escapeHtml(l.name)} (${formatAmount(l.amount)})</option>`).join('')}
+        </select>
+      </div>` : ''}
+      <div class="form-group">
+        <label class="form-label">Amount <span id="action-max-label">(max ${formatAmount(totalAmount)})</span></label>
         <div class="number-stepper">
           <button class="stepper-btn" data-action="decrement">\u2212</button>
           <input type="number" id="modal-amount" class="stepper-value" value="1" min="0.01" max="${totalAmount}" step="1">
@@ -666,14 +685,25 @@ function setupActionButtons() {
       </div>
       <button class="btn btn-primary" style="width:100%;" id="modal-confirm">Consume</button>
     `);
+    if (hasMultipleLocations) setupLocationMaxSync(totalAmount, 'amount');
     setupStepperAndConfirm('consume');
   });
 
   document.getElementById('action-open')?.addEventListener('click', () => {
     const unopened = _stockEntries.reduce((sum, e) => sum + parseFloat(e.amount || 0) - parseFloat(e.amount_opened || 0), 0);
+    const locOptions = buildStockLocationOptions('unopened');
+    const hasMultipleLocations = locOptions.length > 1;
     showModal('Mark as Opened', `
+      ${hasMultipleLocations ? `
       <div class="form-group">
-        <label class="form-label">Amount to open (max ${formatAmount(unopened)})</label>
+        <label class="form-label">Location</label>
+        <select id="modal-action-location" class="form-input">
+          <option value="">All locations (${formatAmount(unopened)})</option>
+          ${locOptions.map(l => `<option value="${l.id}">${escapeHtml(l.name)} (${formatAmount(l.amount)})</option>`).join('')}
+        </select>
+      </div>` : ''}
+      <div class="form-group">
+        <label class="form-label">Amount to open <span id="action-max-label">(max ${formatAmount(unopened)})</span></label>
         <div class="number-stepper">
           <button class="stepper-btn" data-action="decrement">\u2212</button>
           <input type="number" id="modal-amount" class="stepper-value" value="1" min="0.01" max="${unopened}" step="1">
@@ -682,6 +712,7 @@ function setupActionButtons() {
       </div>
       <button class="btn btn-primary" style="width:100%;" id="modal-confirm">Mark Opened</button>
     `);
+    if (hasMultipleLocations) setupLocationMaxSync(unopened, 'unopened');
     setupStepperAndConfirm('open');
   });
 
@@ -704,6 +735,137 @@ function setupActionButtons() {
     `);
     setupStepperAndConfirm('inventory');
   });
+
+  // Transfer action
+  document.getElementById('action-transfer')?.addEventListener('click', () => {
+    showTransferModal();
+  });
+}
+
+/* =================================================================
+   LOCATION HELPERS for Consume / Open modals
+   ================================================================= */
+function buildStockLocationOptions(mode) {
+  const locationMap = {};
+  _locations.forEach(l => locationMap[l.id] = l.name);
+
+  const byLoc = {};
+  _stockEntries.forEach(e => {
+    const locId = e.location_id;
+    if (!locId) return;
+    if (mode === 'unopened') {
+      const unopened = parseFloat(e.amount || 0) - parseFloat(e.amount_opened || 0);
+      byLoc[locId] = (byLoc[locId] || 0) + unopened;
+    } else {
+      byLoc[locId] = (byLoc[locId] || 0) + parseFloat(e.amount || 0);
+    }
+  });
+
+  return Object.entries(byLoc)
+    .filter(([, amt]) => amt > 0)
+    .map(([id, amt]) => ({ id, name: locationMap[id] || 'Unknown', amount: amt }));
+}
+
+function setupLocationMaxSync(totalMax, mode) {
+  const locSelect = document.getElementById('modal-action-location');
+  if (!locSelect) return;
+
+  const locOptions = buildStockLocationOptions(mode);
+
+  locSelect.addEventListener('change', () => {
+    const selectedId = locSelect.value;
+    let maxAmt = totalMax;
+    if (selectedId) {
+      const loc = locOptions.find(l => String(l.id) === String(selectedId));
+      maxAmt = loc ? loc.amount : totalMax;
+    }
+    const amountInput = document.getElementById('modal-amount');
+    if (amountInput) {
+      amountInput.max = maxAmt;
+      if (parseFloat(amountInput.value) > maxAmt) amountInput.value = Math.min(parseFloat(amountInput.value), maxAmt);
+    }
+    const maxLabel = document.getElementById('action-max-label');
+    if (maxLabel) maxLabel.textContent = `(max ${formatAmount(maxAmt)})`;
+  });
+}
+
+/* =================================================================
+   TRANSFER MODAL
+   ================================================================= */
+function showTransferModal() {
+  // Build "from" locations from stock entries (locations that actually have stock)
+  const locationMap = {};
+  _locations.forEach(l => locationMap[l.id] = l.name);
+
+  const stockByLocation = {};
+  _stockEntries.forEach(e => {
+    const locId = e.location_id;
+    if (!locId) return;
+    stockByLocation[locId] = (stockByLocation[locId] || 0) + parseFloat(e.amount || 0);
+  });
+
+  const fromLocations = Object.entries(stockByLocation)
+    .filter(([, amt]) => amt > 0)
+    .map(([id, amt]) => ({ id, name: locationMap[id] || 'Unknown', amount: amt }));
+
+  if (fromLocations.length === 0) {
+    showToast('No stock to transfer', 'error');
+    return;
+  }
+
+  const defaultFrom = fromLocations[0];
+
+  showModal('Transfer', `
+    <div class="form-group">
+      <label class="form-label">From location</label>
+      <select id="modal-from-location" class="form-input">
+        ${fromLocations.map(l => `<option value="${l.id}">${escapeHtml(l.name)} (${formatAmount(l.amount)} in stock)</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">To location</label>
+      <select id="modal-to-location" class="form-input">
+        ${_locations.filter(l => String(l.id) !== String(defaultFrom.id)).map(l => `<option value="${l.id}">${escapeHtml(l.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Amount <span id="transfer-max-label">(max ${formatAmount(defaultFrom.amount)})</span></label>
+      <div class="number-stepper">
+        <button class="stepper-btn" data-action="decrement">\u2212</button>
+        <input type="number" id="modal-amount" class="stepper-value" value="1" min="1" max="${defaultFrom.amount}" step="1">
+        <button class="stepper-btn" data-action="increment">+</button>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;" id="modal-confirm">Transfer</button>
+  `);
+
+  // Update "to" options and max when "from" changes
+  const fromSelect = document.getElementById('modal-from-location');
+  fromSelect?.addEventListener('change', () => {
+    const selectedFromId = fromSelect.value;
+    const fromLoc = fromLocations.find(l => String(l.id) === String(selectedFromId));
+    const maxAmt = fromLoc ? fromLoc.amount : 1;
+
+    // Update "to" dropdown — exclude selected "from"
+    const toSelect = document.getElementById('modal-to-location');
+    if (toSelect) {
+      toSelect.innerHTML = _locations
+        .filter(l => String(l.id) !== String(selectedFromId))
+        .map(l => `<option value="${l.id}">${escapeHtml(l.name)}</option>`)
+        .join('');
+    }
+
+    // Update max amount
+    const amountInput = document.getElementById('modal-amount');
+    if (amountInput) {
+      amountInput.max = maxAmt;
+      if (parseFloat(amountInput.value) > maxAmt) amountInput.value = maxAmt;
+    }
+    const maxLabel = document.getElementById('transfer-max-label');
+    if (maxLabel) maxLabel.textContent = `(max ${formatAmount(maxAmt)})`;
+  });
+
+  setupStepperAndConfirm('transfer');
 }
 
 function setupStepperAndConfirm(action) {
@@ -740,12 +902,14 @@ function setupStepperAndConfirm(action) {
         }
         case 'consume': {
           const spoiled = document.getElementById('modal-spoiled')?.checked || false;
-          await api.consumeProduct(_product.id, amount, spoiled);
+          const consumeLocId = document.getElementById('modal-action-location')?.value || null;
+          await api.consumeProduct(_product.id, amount, spoiled, consumeLocId ? parseInt(consumeLocId) : null);
           showToast('Consumed ' + formatAmount(amount), 'success');
           break;
         }
         case 'open': {
-          await api.openProduct(_product.id, amount);
+          const openLocId = document.getElementById('modal-action-location')?.value || null;
+          await api.openProduct(_product.id, amount, openLocId ? parseInt(openLocId) : null);
           showToast('Opened ' + formatAmount(amount), 'success');
           break;
         }
@@ -753,6 +917,15 @@ function setupStepperAndConfirm(action) {
           const date = document.getElementById('modal-date')?.value;
           await api.inventoryProduct(_product.id, amount, date || undefined);
           showToast('Inventory updated', 'success');
+          break;
+        }
+        case 'transfer': {
+          const fromLoc = document.getElementById('modal-from-location')?.value;
+          const toLoc = document.getElementById('modal-to-location')?.value;
+          if (!fromLoc || !toLoc) { showToast('Select both locations', 'error'); return; }
+          if (fromLoc === toLoc) { showToast('Locations must be different', 'error'); return; }
+          await api.transferProduct(_product.id, amount, parseInt(fromLoc), parseInt(toLoc));
+          showToast('Transferred ' + formatAmount(amount), 'success');
           break;
         }
       }

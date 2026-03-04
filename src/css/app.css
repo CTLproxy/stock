@@ -433,6 +433,27 @@ input, select, textarea {
   color: var(--color-accent-text);
 }
 
+/* --- Tab Bar --- */
+.tab-bar { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0; margin-bottom: 12px; -webkit-overflow-scrolling: touch; }
+.tab-btn {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill, 20px);
+  border: 1px solid var(--color-border);
+  background: var(--color-glass);
+  backdrop-filter: blur(var(--blur-glass));
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.tab-btn-active {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+
 /* --- Stats Grid --- */
 .stats-grid {
   display: grid;
@@ -446,10 +467,11 @@ input, select, textarea {
   -webkit-backdrop-filter: blur(var(--blur-glass));
   border: 0.5px solid var(--color-glass-border);
   border-radius: var(--radius-lg);
-  padding: var(--space-lg);
+  padding: 10px 12px;
   display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-sm);
   transition: transform var(--duration-fast) var(--ease-spring);
   cursor: pointer;
 }
@@ -458,14 +480,42 @@ input, select, textarea {
   transform: scale(0.97);
 }
 
+.stat-card .stat-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-card .stat-value {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Detail-style stat cards: vertical stacking for long content */
+.stats-grid--detail .stat-card {
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--space-md);
+}
+
+.stats-grid--detail .stat-card .stat-value {
+  margin-left: 0;
+  font-size: 15px;
+  word-break: break-word;
+  flex-shrink: 1;
+}
+
+.stats-grid--detail .stat-card .stat-label {
+  flex: none;
+}
+
 .stat-icon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: var(--space-xs);
+  flex-shrink: 0;
 }
 
 .stat-icon.green { background: var(--color-accent-soft); color: var(--color-accent); }
@@ -477,7 +527,7 @@ input, select, textarea {
 .stat-icon.teal { background: var(--color-teal-soft); color: var(--color-teal); }
 
 .stat-value {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.5px;
   line-height: 1;
@@ -544,6 +594,28 @@ input, select, textarea {
   color: var(--color-text-secondary);
   margin-top: 2px;
 }
+
+/* --- Ingredient availability indicators --- */
+.ingredient-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border: 2px solid var(--color-bg);
+}
+.ingredient-badge-ok { background: var(--color-green, #34c759); color: #fff; }
+.ingredient-badge-partial { background: var(--color-orange, #ff9500); color: #fff; }
+.ingredient-badge-missing { background: var(--color-red, #ff3b30); color: #fff; }
+.ingredient-missing .product-name { color: var(--color-red, #ff3b30); }
+.ingredient-partial .product-name { color: var(--color-orange, #ff9500); }
 
 .product-badge {
   padding: 4px 10px;
@@ -900,6 +972,7 @@ input, select, textarea {
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
+  overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   background: var(--color-bg-secondary);
@@ -907,6 +980,21 @@ input, select, textarea {
   padding: var(--space-2xl);
   padding-bottom: calc(var(--space-2xl) + var(--safe-area-bottom));
   animation: slideUp var(--duration-normal) var(--ease-spring);
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.modal-content * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-content input,
+.modal-content select,
+.modal-content textarea,
+.modal-content button {
+  min-width: 0;
 }
 
 .modal-handle {
@@ -1651,3 +1739,159 @@ input, select, textarea {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* =================================================================
+   Mode Selector
+   ================================================================= */
+.mode-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.mode-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 16px;
+  background: var(--color-glass);
+  border: 0.5px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-out),
+              background var(--duration-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mode-card:active {
+  transform: scale(0.98);
+  background: var(--color-surface-elevated);
+}
+
+.mode-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.mode-card-icon.green  { background: var(--color-accent-soft); }
+.mode-card-icon.yellow { background: var(--color-yellow-soft); }
+.mode-card-icon.blue   { background: var(--color-blue-soft); }
+.mode-card-icon.gray   { background: var(--color-glass); }
+
+.mode-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mode-card-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: -0.2px;
+}
+
+.mode-card-desc {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.mode-card-chevron {
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+/* =================================================================
+   Badge aliases for batteries / chores due status
+   ================================================================= */
+.badge-ok      { background: var(--color-accent-soft); color: var(--color-accent); }
+.badge-warning { background: var(--color-orange-soft); color: var(--color-orange); }
+.badge-overdue { background: var(--color-red-soft); color: var(--color-red); }
+.badge-neutral { background: var(--color-glass); color: var(--color-text-secondary); }
+
+/* =================================================================
+   Stat-value colour helpers
+   ================================================================= */
+.stat-value-green  { color: var(--color-accent); }
+.stat-value-orange { color: var(--color-orange); }
+.stat-value-red    { color: var(--color-red); }
+.stat-value-neutral { color: var(--color-text-secondary); }
+
+/* =================================================================
+   Stat sub-label (relative time beneath stat values)
+   ================================================================= */
+.stat-sub {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+  font-weight: 400;
+}
+.stat-sub-red    { color: var(--color-red); }
+.stat-sub-orange { color: var(--color-orange); }
+.stat-sub-green  { color: var(--color-accent); }
+
+/* =================================================================
+   Chore list item highlighting
+   ================================================================= */
+.chore-item-overdue {
+  border-left: 3px solid var(--color-red) !important;
+  background: color-mix(in srgb, var(--color-red) 8%, transparent) !important;
+}
+.chore-item-due-today {
+  border-left: 3px solid var(--color-orange) !important;
+  background: color-mix(in srgb, var(--color-orange) 8%, transparent) !important;
+}
+
+/* =================================================================
+   Nav badge (chore indicator on bottom nav)
+   ================================================================= */
+.nav-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  line-height: 1;
+  pointer-events: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.nav-badge-overdue { background: var(--color-red); }
+.nav-badge-due     { background: var(--color-orange); }
+
+/* =================================================================
+   Mode card badge (chore indicator on mode selector)
+   ================================================================= */
+.mode-card-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  line-height: 1;
+  pointer-events: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.mode-card-badge-overdue { background: var(--color-red); }
+.mode-card-badge-due     { background: var(--color-orange); }

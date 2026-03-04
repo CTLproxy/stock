@@ -20,7 +20,9 @@ class Store {
       const haUrl = await get('grocy_ha_url');
       const haToken = await get('grocy_ha_token');
       const addonSlug = await get('grocy_addon_slug');
+      const grocyApiKey = await get('grocy_grocy_api_key');
       const barcodeSources = await get('grocy_barcode_sources');
+      const dashboardShowChores = await get('grocy_dashboard_show_chores');
 
       this._state = {
         serverUrl: serverUrl || '',
@@ -30,7 +32,9 @@ class Store {
         haUrl: haUrl || '',
         haToken: haToken || '',
         addonSlug: addonSlug || 'a0d7b954_grocy',
+        grocyApiKey: grocyApiKey || '',
         barcodeSources: barcodeSources || { primary: 'off_se', enabled: ['off_se', 'off_world', 'obf', 'opff', 'upcitemdb'] },
+        dashboardShowChores: dashboardShowChores || 0,
         isConnected: false,
         isOnline: navigator.onLine,
 
@@ -61,7 +65,9 @@ class Store {
         haUrl: '',
         haToken: '',
         addonSlug: 'a0d7b954_grocy',
+        grocyApiKey: '',
         barcodeSources: { primary: 'off_se', enabled: ['off_se', 'off_world', 'obf', 'opff', 'upcitemdb'] },
+        dashboardShowChores: 0,
         isConnected: false,
         isOnline: navigator.onLine,
         products: [],
@@ -105,7 +111,9 @@ class Store {
       haUrl: 'grocy_ha_url',
       haToken: 'grocy_ha_token',
       addonSlug: 'grocy_addon_slug',
+      grocyApiKey: 'grocy_grocy_api_key',
       barcodeSources: 'grocy_barcode_sources',
+      dashboardShowChores: 'grocy_dashboard_show_chores',
     };
     if (persistMap[key]) {
       set(persistMap[key], value).catch(console.warn);

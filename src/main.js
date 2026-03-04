@@ -15,6 +15,16 @@ import { renderProductDetail, renderProductCreate } from './js/pages/product-det
 import { renderScanPage, cleanupScanPage } from './js/pages/scan.js';
 import { renderShopping } from './js/pages/shopping.js';
 import { renderSettings } from './js/pages/settings.js';
+import { renderModeSelector } from './js/pages/mode-selector.js';
+import { renderBatteries } from './js/pages/batteries.js';
+import { renderBatteryDetail, renderBatteryCreate } from './js/pages/battery-detail.js';
+import { renderChores } from './js/pages/chores.js';
+import { renderChoreDetail, renderChoreCreate } from './js/pages/chore-detail.js';
+import { renderEquipment } from './js/pages/equipment.js';
+import { renderEquipmentDetail, renderEquipmentCreate } from './js/pages/equipment-detail.js';
+import { renderRecipes } from './js/pages/recipes.js';
+import { renderRecipeDetail, renderRecipeCreate } from './js/pages/recipe-detail.js';
+import { renderMasterData } from './js/pages/master-data.js';
 import { initPullToRefresh } from './js/pull-to-refresh.js';
 
 /* ---------- Boot ---------- */
@@ -66,11 +76,12 @@ async function boot() {
   const haUrl = store.get('haUrl');
   const haToken = store.get('haToken');
   const addonSlug = store.get('addonSlug');
+  const grocyApiKey = store.get('grocyApiKey');
 
   let isConfigured = false;
 
   if (connectionMode === 'ha_ingress' && haUrl && haToken && addonSlug) {
-    api.configureHA(haUrl, haToken, addonSlug);
+    api.configureHA(haUrl, haToken, addonSlug, grocyApiKey || '');
     isConfigured = true;
   } else if (connectionMode === 'direct' && serverUrl && apiKey) {
     api.configure(serverUrl, apiKey);
@@ -96,6 +107,55 @@ async function boot() {
 
   // Start router (attaches hashchange listener + handles current hash)
   router.init();
+
+  // Update chore badge after boot
+  if (isConfigured) {
+    setTimeout(updateChoreBadge, 800);
+    window.addEventListener('chores-changed', () => updateChoreBadge());
+  }
+}
+
+/* ---------- Chore Badge ---------- */
+async function updateChoreBadge() {
+  try {
+    const badge = document.getElementById('chore-badge');
+    if (!badge) return;
+
+    const chores = await api.getChores();
+    const periodicChores = chores.filter(c => c.period_type !== 'manually');
+
+    if (periodicChores.length === 0) {
+      badge.style.display = 'none';
+      return;
+    }
+
+    const details = await Promise.all(
+      periodicChores.map(c => api.getChoreDetails(c.id).catch(() => null))
+    );
+
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    let dueCount = 0;
+    let overdueCount = 0;
+
+    for (const d of details.filter(Boolean)) {
+      const next = d.next_estimated_execution_time;
+      if (!next) continue;
+      const dueDate = new Date(next);
+      const dueStr = `${dueDate.getFullYear()}-${String(dueDate.getMonth()+1).padStart(2,'0')}-${String(dueDate.getDate()).padStart(2,'0')}`;
+      if (dueStr < todayStr) overdueCount++;
+      else if (dueStr === todayStr) dueCount++;
+    }
+
+    const total = dueCount + overdueCount;
+    if (total > 0) {
+      badge.textContent = total;
+      badge.className = overdueCount > 0 ? 'nav-badge nav-badge-overdue' : 'nav-badge nav-badge-due';
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch { /* ignore */ }
 }
 
 /* ---------- Routes ---------- */
@@ -141,8 +201,78 @@ function registerRoutes() {
   });
 
   router.register('/settings', () => {
-    setActiveNav('/settings');
+    setActiveNav('/mode');
     renderSettings();
+  });
+
+  router.register('/mode', () => {
+    setActiveNav('/mode');
+    renderModeSelector();
+  });
+
+  router.register('/batteries', () => {
+    setActiveNav('/mode');
+    renderBatteries();
+  });
+
+  router.register('/battery/new', () => {
+    setActiveNav('/mode');
+    renderBatteryCreate();
+  });
+
+  router.register('/battery/:id', (params) => {
+    setActiveNav('/mode');
+    renderBatteryDetail(params);
+  });
+
+  router.register('/chores', () => {
+    setActiveNav('/mode');
+    renderChores();
+  });
+
+  router.register('/chore/new', () => {
+    setActiveNav('/mode');
+    renderChoreCreate();
+  });
+
+  router.register('/chore/:id', (params) => {
+    setActiveNav('/mode');
+    renderChoreDetail(params);
+  });
+
+  router.register('/equipment', () => {
+    setActiveNav('/mode');
+    renderEquipment();
+  });
+
+  router.register('/equipment/new', () => {
+    setActiveNav('/mode');
+    renderEquipmentCreate();
+  });
+
+  router.register('/equipment/:id', (params) => {
+    setActiveNav('/mode');
+    renderEquipmentDetail(params);
+  });
+
+  router.register('/recipes', () => {
+    setActiveNav('/mode');
+    renderRecipes();
+  });
+
+  router.register('/recipe/new', () => {
+    setActiveNav('/mode');
+    renderRecipeCreate();
+  });
+
+  router.register('/recipe/:id', (params) => {
+    setActiveNav('/mode');
+    renderRecipeDetail(params);
+  });
+
+  router.register('/master-data', () => {
+    setActiveNav('/mode');
+    renderMasterData();
   });
 
   // Fallback

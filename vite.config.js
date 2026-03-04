@@ -66,7 +66,7 @@ function haIngressProxy() {
         const outHeaders = {};
         const forward = [
           'authorization', 'content-type', 'accept', 'content-length',
-          'accept-encoding', 'user-agent', 'cookie',
+          'accept-encoding', 'user-agent', 'cookie', 'grocy-api-key',
         ];
         for (const h of forward) {
           if (req.headers[h]) outHeaders[h] = req.headers[h];

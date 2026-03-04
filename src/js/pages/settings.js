@@ -83,6 +83,11 @@ export function renderSettings() {
           <input type="password" id="settings-ha-token" class="form-input" value="${haToken}" placeholder="eyJhbGciOi..." autocomplete="off">
           <div class="form-hint">HA → Profile (bottom-left) → scroll down → Long-Lived Access Tokens → Create Token</div>
         </div>
+        <div class="form-group">
+          <label class="form-label">Grocy API Key</label>
+          <input type="password" id="settings-grocy-apikey" class="form-input" value="${store.get('grocyApiKey') || ''}" placeholder="Paste Grocy API key…" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+          <div class="form-hint">Grocy → top-right menu → Manage API keys → Add</div>
+        </div>
         <div style="display: flex; gap: 8px;">
           <button class="btn btn-primary" id="settings-save-ha" style="flex: 1;">Save & Connect</button>
           <button class="btn btn-secondary" id="settings-test-ha">Test</button>
@@ -105,6 +110,10 @@ export function renderSettings() {
           <div class="ha-step" data-step="4" style="display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px;">
             <span class="step-icon">○</span>
             <span class="step-text" style="color: var(--color-text-secondary);">Connect to Grocy</span>
+          </div>
+          <div class="ha-step" data-step="5" style="display: none; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 12px;">
+            <span class="step-icon">ℹ</span>
+            <span class="step-text" style="color: var(--color-text-tertiary); word-break: break-all;"></span>
           </div>
         </div>
         <div id="connection-status-ha" style="margin-top: 8px; display: none;"></div>
@@ -138,6 +147,21 @@ export function renderSettings() {
     ` : ''}
 
     ${renderBarcodeSourcesSection()}
+
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Dashboard</h2>
+      </div>
+      <div class="settings-list">
+        <div class="settings-item">
+          <span>Show Chores widgets</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="settings-dash-chores" ${store.get('dashboardShowChores') ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
 
     <div class="section">
       <div class="section-header">
@@ -286,6 +310,12 @@ function setupBarcodeSourceListeners() {
 
 function setupSettingsListeners() {
   setupBarcodeSourceListeners();
+
+  // Dashboard chores toggle
+  document.getElementById('settings-dash-chores')?.addEventListener('change', (e) => {
+    store.set('dashboardShowChores', e.target.checked ? 1 : 0);
+  });
+
   // Mode switcher
   const modeControl = document.getElementById('conn-mode-control');
   if (modeControl) {
@@ -373,7 +403,7 @@ function setupSettingsListeners() {
   });
 
   // --- HA Ingress mode: shared step-by-step runner ---
-  async function runHATest(haUrl, haToken, { saveOnSuccess = false } = {}) {
+  async function runHATest(haUrl, haToken, { saveOnSuccess = false, grocyApiKey = '' } = {}) {
     const stepsEl = document.getElementById('ha-test-steps');
     if (stepsEl) stepsEl.style.display = 'block';
 
@@ -386,6 +416,7 @@ function setupSettingsListeners() {
     const onStep = (step, status, message) => {
       const stepEl = stepsEl?.querySelector(`[data-step="${step}"]`);
       if (!stepEl) return;
+      stepEl.style.display = 'flex';
       const icon = stepEl.querySelector('.step-icon');
       const text = stepEl.querySelector('.step-text');
       if (status === 'pending') {
@@ -404,14 +435,15 @@ function setupSettingsListeners() {
     };
 
     try {
-      const result = await api.testHAConnection(haUrl, haToken, onStep);
+      const result = await api.testHAConnection(haUrl, haToken, onStep, grocyApiKey);
 
       if (saveOnSuccess && result.success) {
         // Persist and re-configure with detected slug
-        api.configureHA(haUrl, haToken, result.slug);
+        api.configureHA(haUrl, haToken, result.slug, grocyApiKey);
         store.set('connectionMode', 'ha_ingress');
         store.set('haUrl', haUrl);
         store.set('haToken', haToken);
+        store.set('grocyApiKey', grocyApiKey);
         store.set('addonSlug', result.slug);
         store.set('serverVersion', result.version || 'Unknown');
 
@@ -431,9 +463,14 @@ function setupSettingsListeners() {
   document.getElementById('settings-save-ha')?.addEventListener('click', async () => {
     const haUrl = document.getElementById('settings-ha-url')?.value?.trim().replace(/\/$/, '');
     const haToken = document.getElementById('settings-ha-token')?.value?.trim();
+    const grocyApiKey = document.getElementById('settings-grocy-apikey')?.value?.trim();
 
     if (!haUrl || !haToken) {
       showToast('Enter both HA URL and token', 'error');
+      return;
+    }
+    if (!grocyApiKey) {
+      showToast('Enter a Grocy API key', 'error');
       return;
     }
 
@@ -441,7 +478,7 @@ function setupSettingsListeners() {
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Connecting…'; }
 
     try {
-      await runHATest(haUrl, haToken, { saveOnSuccess: true });
+      await runHATest(haUrl, haToken, { saveOnSuccess: true, grocyApiKey });
     } finally {
       if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save & Connect'; }
     }
@@ -451,6 +488,7 @@ function setupSettingsListeners() {
   document.getElementById('settings-test-ha')?.addEventListener('click', async () => {
     const haUrl = document.getElementById('settings-ha-url')?.value?.trim().replace(/\/$/, '');
     const haToken = document.getElementById('settings-ha-token')?.value?.trim();
+    const grocyApiKey = document.getElementById('settings-grocy-apikey')?.value?.trim();
 
     if (!haUrl || !haToken) {
       showToast('Enter both fields', 'error');
@@ -461,7 +499,7 @@ function setupSettingsListeners() {
     if (testBtn) { testBtn.disabled = true; testBtn.textContent = 'Testing…'; }
 
     try {
-      await runHATest(haUrl, haToken, { saveOnSuccess: false });
+      await runHATest(haUrl, haToken, { saveOnSuccess: false, grocyApiKey });
     } finally {
       if (testBtn) { testBtn.disabled = false; testBtn.textContent = 'Test'; }
     }
@@ -481,9 +519,11 @@ function setupSettingsListeners() {
       const haUrl = store.get('haUrl');
       const haToken = store.get('haToken');
       const slug = store.get('addonSlug');
+      const grocyApiKey = store.get('grocyApiKey');
       if (haUrl) store.set('haUrl', haUrl);
       if (haToken) store.set('haToken', haToken);
       if (slug) store.set('addonSlug', slug);
+      if (grocyApiKey) store.set('grocyApiKey', grocyApiKey);
       showToast('Offline cache cleared', 'success');
     } catch (e) {
       showToast('Failed to clear cache', 'error');
