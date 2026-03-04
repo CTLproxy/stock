@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3
+
+- Fix HA ingress API parsing when responses are compressed/encoded unexpectedly
+- Prevent false connection failure with "The string did not match the expected pattern"
+
 ## 1.0.2
 
 - Fix nginx root path for `nginx:stable-alpine` image to resolve Web UI 500 error on ingress open

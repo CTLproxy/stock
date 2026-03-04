@@ -526,6 +526,42 @@ class GrocyAPI {
     this._cache.set(key, { data, time: Date.now() });
   }
 
+  async _parseJsonFromResponse(response) {
+    const buffer = await response.arrayBuffer();
+    if (!buffer || buffer.byteLength === 0) return null;
+
+    const bytes = new Uint8Array(buffer);
+    const parseText = (text) => {
+      const trimmed = (text || '').trim();
+      if (!trimmed) return null;
+      return JSON.parse(trimmed);
+    };
+
+    try {
+      const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+      return parseText(text);
+    } catch {
+      // Fallback below
+    }
+
+    const looksGzip = bytes.length > 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+    const looksDeflate = bytes.length > 1 && bytes[0] === 0x78;
+
+    if (typeof DecompressionStream !== 'undefined' && (looksGzip || looksDeflate)) {
+      try {
+        const algo = looksGzip ? 'gzip' : 'deflate';
+        const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(algo));
+        const text = await new Response(stream).text();
+        return parseText(text);
+      } catch {
+        // Continue to final error
+      }
+    }
+
+    const preview = Array.from(bytes.slice(0, 8)).map((b) => b.toString(16).padStart(2, '0')).join(' ');
+    throw new Error(`Unable to parse API response as JSON (first bytes: ${preview})`);
+  }
+
   invalidateCache(pattern) {
     if (!pattern) {
       this._cache.clear();
@@ -577,7 +613,7 @@ class GrocyAPI {
     if (!response.ok) {
       let errorMsg = `API Error: ${response.status}`;
       try {
-        const errData = await response.json();
+        const errData = await this._parseJsonFromResponse(response);
         errorMsg = errData.error_message || errData.message || errorMsg;
       } catch (_) {
         // ignore parse error
@@ -590,7 +626,7 @@ class GrocyAPI {
       return null;
     }
 
-    const data = await response.json();
+    const data = await this._parseJsonFromResponse(response);
 
     if (useCache && method === 'GET') {
       this._setCache(rawUrl, data);
