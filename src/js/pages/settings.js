@@ -96,6 +96,10 @@ export function renderSettings() {
           <button class="btn btn-primary" id="settings-save-ha" style="flex: 1;">Save & Connect</button>
           <button class="btn btn-secondary" id="settings-test-ha">Test</button>
         </div>
+        <div style="margin-top: 8px;">
+          <button class="btn btn-secondary" id="settings-switch-internal-proxy" style="width: 100%;">Switch to Direct + Internal Grocy Proxy</button>
+        </div>
+        <div class="form-hint" style="margin-top: 6px;">Use this when app runs inside HA UI and you want Grocy API key only (no HA token).</div>
 
         <!-- Step-by-step progress area -->
         <div id="ha-test-steps" style="margin-top: 12px; display: none;">
@@ -386,12 +390,24 @@ function setupSettingsListeners() {
     }
   });
 
-  document.getElementById('settings-use-internal-proxy')?.addEventListener('click', () => {
+  const applyInternalProxyDirectMode = () => {
+    const modeControl = document.getElementById('conn-mode-control');
+    const directBtn = modeControl?.querySelector('.segmented-btn[data-mode="direct"]');
+    if (modeControl && directBtn) {
+      modeControl.querySelectorAll('.segmented-btn').forEach(s => s.classList.remove('active'));
+      directBtn.classList.add('active');
+      document.getElementById('direct-settings').style.display = 'block';
+      document.getElementById('ha-settings').style.display = 'none';
+    }
+
     const urlInput = document.getElementById('settings-url');
     if (!urlInput) return;
     urlInput.value = getInternalProxyUrl();
-    showToast('Internal proxy URL applied. Enter Grocy API key and connect.', 'success');
-  });
+    showToast('Switched to Direct mode with internal proxy URL. Enter Grocy API key and connect.', 'success');
+  };
+
+  document.getElementById('settings-use-internal-proxy')?.addEventListener('click', applyInternalProxyDirectMode);
+  document.getElementById('settings-switch-internal-proxy')?.addEventListener('click', applyInternalProxyDirectMode);
 
   // Dashboard chores toggle
   document.getElementById('settings-dash-chores')?.addEventListener('change', (e) => {

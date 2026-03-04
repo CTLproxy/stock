@@ -5,6 +5,7 @@ FROM node:20-alpine AS builder
 RUN apk add --no-cache git
 
 WORKDIR /app
+ADD https://api.github.com/repos/CTLproxy/stock/commits/main /tmp/stock_commit.json
 RUN git clone --depth 1 https://github.com/CTLproxy/stock.git .
 RUN npm ci --ignore-scripts && npm run build
 

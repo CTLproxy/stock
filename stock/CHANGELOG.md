@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.9
+
+- Add HA Ingress section action to switch directly to Direct mode + internal Grocy proxy URL
+- Ensure add-on builder fetches latest repo commit by busting Docker git-clone cache
+
 ## 1.0.8
 
 - Fix add-on startup crash when Grocy hostname is not resolvable at nginx boot
