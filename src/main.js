@@ -11,7 +11,7 @@ import { setActiveNav, showToast } from './js/ui.js';
 import { renderDashboard } from './js/pages/dashboard.js';
 import { renderStock } from './js/pages/stock.js';
 import { renderProducts } from './js/pages/products.js';
-import { renderProductDetail } from './js/pages/product-detail.js';
+import { renderProductDetail, renderProductCreate } from './js/pages/product-detail.js';
 import { renderScanPage, cleanupScanPage } from './js/pages/scan.js';
 import { renderShopping } from './js/pages/shopping.js';
 import { renderSettings } from './js/pages/settings.js';
@@ -117,14 +117,7 @@ function registerRoutes() {
 
   router.register('/product/new', () => {
     setActiveNav('/stock');
-    // Redirect to Grocy for full product creation (too complex for mobile)
-    const url = store.get('serverUrl');
-    if (url) {
-      window.open(`${url}/product/new`, '_blank');
-      history.back();
-    } else {
-      showToast('Server not configured', 'error');
-    }
+    renderProductCreate();
   });
 
   router.register('/product/:id', (params) => {

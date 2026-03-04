@@ -761,6 +761,14 @@ class GrocyAPI {
     return this.addObject('product_barcodes', data);
   }
 
+  async deleteProductBarcode(id) {
+    return this.deleteObject('product_barcodes', id);
+  }
+
+  async editProductBarcode(id, data) {
+    return this.editObject('product_barcodes', id, data);
+  }
+
   // --- Shopping Lists ---
   async getShoppingLists() {
     return this.getObjects('shopping_lists');

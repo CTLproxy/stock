@@ -140,19 +140,18 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   overflow: hidden;
-  height: 100%;
-  height: 100dvh;
+  position: fixed;
+  inset: 0;
   background: #0a0a0a;
   background: var(--color-bg);
   color: var(--color-text);
 }
 
 body {
-  height: 100%;
-  height: 100dvh;
+  position: fixed;
+  inset: 0;
   overflow: hidden;
   background: var(--color-bg);
-  position: relative;
 }
 
 /* Ambient background gradient */
@@ -172,11 +171,10 @@ body::before {
 }
 
 #app {
-  height: 100%;
-  height: 100dvh;
-  width: 100%;
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 1;
+  overflow: hidden;
 }
 
 a {
@@ -248,11 +246,11 @@ input, select, textarea {
 
 /* --- App Container --- */
 .app-container {
-  height: 100%;
-  height: 100dvh;
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  position: relative;
+  overflow: hidden;
 }
 
 /* --- Header --- */
@@ -662,6 +660,37 @@ input, select, textarea {
   border-radius: var(--radius-full);
   background: var(--color-glass-strong);
   border: 0.5px solid var(--color-glass-border);
+}
+
+.btn-danger {
+  background: var(--color-error, #ff3b30);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-lg);
+  font-weight: 600;
+  font-size: 15px;
+  height: 48px;
+}
+
+.btn-danger:active {
+  opacity: 0.8;
+}
+
+.badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-glass-strong);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-left: 4px;
+  vertical-align: middle;
 }
 
 /* --- Form Elements --- */
@@ -1326,6 +1355,24 @@ input, select, textarea {
 .detail-hero {
   text-align: center;
   margin-bottom: var(--space-2xl);
+}
+
+.detail-emoji {
+  display: block;
+  font-size: 48px;
+  margin-bottom: var(--space-md);
+}
+
+.detail-name {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin: 0 0 var(--space-xs);
+}
+
+.detail-subtitle {
+  font-size: 15px;
+  color: var(--color-text-secondary);
 }
 
 .detail-hero-icon {

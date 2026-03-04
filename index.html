@@ -18,8 +18,8 @@
   <style>
     /* Inline critical styles for loading screen — prevents FOUC */
     :root { --color-bg: #0a0a0a; --color-text: #f0f0f5; }
-    html { background: #0a0a0a; }
-    body { margin: 0; background: var(--color-bg); color: var(--color-text); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; }
+    html { background: #0a0a0a; position: fixed; inset: 0; overflow: hidden; }
+    body { margin: 0; position: fixed; inset: 0; overflow: hidden; background: var(--color-bg); color: var(--color-text); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; }
     .loading-screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--color-bg); z-index: 9999; transition: opacity 0.4s ease; }
     .loading-content { text-align: center; }
     .loading-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin: 0 0 8px; }
