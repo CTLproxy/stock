@@ -242,38 +242,46 @@ class GrocyAPI {
     }
   }
 
-  /** Create an ingress session via HA REST API. */
+  /** Create an ingress session (prefer WS, fallback to REST). */
   async _createIngressSession() {
-    // Endpoint is /ingress/session (NOT /addons/{slug}/ingress/session)
-    // Body accepts optional user_id only — no addon field
-    const url = this._proxyUrl(`${this.haUrl}/api/hassio/ingress/session`);
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.haToken}`,
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: '{}',
-    });
-
-    if (!res.ok) {
-      // If REST fails (e.g. 401 with long-lived token), try via WebSocket
-      let detail = '';
-      try { detail = (await res.text()).substring(0, 200); } catch {}
-      console.warn(`[api] REST ingress/session returned ${res.status}: ${detail}, trying WS fallback…`);
-      return this._createIngressSessionWS();
+    try {
+      return await this._createIngressSessionWS();
+    } catch (wsErr) {
+      console.warn(`[api] WS ingress/session failed: ${wsErr?.message || wsErr}. Trying REST fallback…`);
     }
 
-    const json = await res.json();
-    const session = json.data?.session;
+    // REST fallback for environments where WS supervisor commands are blocked
+    const url = this._proxyUrl(`${this.haUrl}/api/hassio/ingress/session`);
+    let res;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.haToken}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: '{}',
+      });
+    } catch (e) {
+      throw new Error(`Ingress session request failed: ${e?.message || e}`);
+    }
+
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.text()).substring(0, 200); } catch {}
+      throw new Error(`HA ingress/session returned ${res.status}${detail ? `: ${detail}` : ''}`);
+    }
+
+    const json = await this._parseJsonFromResponse(res);
+    const session = json?.data?.session;
     if (!session) {
       throw new Error('HA did not return an ingress session (REST)');
     }
 
-    // Fetch addon info to get the ingress entry path
-    await this._fetchIngressEntry();
+    if (!this._ingressEntry) {
+      await this._fetchIngressEntry();
+    }
 
     this._ingressSession = session;
     this._sessionExpiry = Date.now() + 5 * 60 * 1000;
@@ -439,8 +447,26 @@ class GrocyAPI {
       // Step 4 — Hit Grocy API through ingress
       onStep(4, 'pending', 'Connecting to Grocy…');
       try {
-        const info = await this._request('GET', '/system/info');
-        const version = info.grocy_version?.Version || info.grocy_version || '?';
+        const infoUrl = this._proxyUrl(`${this.baseUrl}/api/system/info`);
+        const res = await fetch(infoUrl, {
+          method: 'GET',
+          headers: this._getHeaders(),
+          credentials: 'include',
+        });
+
+        if (!res.ok) {
+          throw new Error(`API Error: ${res.status}`);
+        }
+
+        let version = '?';
+        try {
+          const info = await this._parseJsonFromResponse(res);
+          version = info?.grocy_version?.Version || info?.grocy_version || '?';
+        } catch {
+          // Some reverse proxies mangle response encoding; status=200 is enough for connectivity check
+          version = '?';
+        }
+
         onStep(4, 'ok', `Grocy ${version} responding`);
         return { success: true, slug, version };
       } catch (e) {

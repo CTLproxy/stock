@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.5
+
+- Prefer WebSocket-based ingress session creation, with REST fallback
+- Handle fetch/network failures in ingress session creation more clearly
+- Make HA test step 4 resilient when `/api/system/info` returns 200 but JSON parsing is proxy-mangled
+
 ## 1.0.4
 
 - Add Settings actions to open app outside HA UI and copy full app URL
