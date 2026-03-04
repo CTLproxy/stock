@@ -110,11 +110,11 @@ stock/
 │   ├── manifest.json        # Web App Manifest
 │   ├── sw.js                # Service Worker
 │   └── icons/               # PWA icons
-├── ha-addon/
+├── stock/
 │   ├── config.yaml          # HA add-on configuration
 │   ├── Dockerfile           # Multi-stage build
 │   ├── nginx.conf           # Nginx config
-│   └── run.sh               # Startup script
+│   └── CHANGELOG.md         # HA add-on changelog
 └── scripts/
     └── generate-icons.js    # SVG → PNG icon generator
 ```
@@ -128,7 +128,7 @@ On first launch, navigate to **Settings** and enter:
 | Server URL | Full URL to your Grocy instance, e.g. `https://grocy.example.com` |
 | API Key | Found in Grocy → Settings → Manage API keys |
 
-For the Home Assistant add-on, these can be pre-configured in the add-on settings panel.
+For the Home Assistant add-on, configure connection in the app Settings screen after opening the add-on UI.
 
 ## Supported Barcode Formats
 
