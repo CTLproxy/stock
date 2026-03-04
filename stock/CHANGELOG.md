@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.4
+
+- Add Settings actions to open app outside HA UI and copy full app URL
+- Provide popup-blocker fallback by copying URL to clipboard/manual display
+
 ## 1.0.3
 
 - Fix HA ingress API parsing when responses are compressed/encoded unexpectedly

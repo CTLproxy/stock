@@ -168,6 +168,22 @@ export function renderSettings() {
         <h2 class="section-title">App</h2>
       </div>
       <div class="settings-list">
+        <div class="settings-item" id="settings-open-external" style="cursor: pointer;">
+          <span>Open Outside HA UI</span>
+          <div class="settings-item-chevron">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </div>
+        </div>
+        <div class="settings-item" id="settings-copy-app-url" style="cursor: pointer;">
+          <span>Copy App URL</span>
+          <div class="settings-item-chevron">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </div>
+        </div>
         <div class="settings-item" id="settings-clear-cache" style="cursor: pointer;">
           <span>Clear Offline Cache</span>
           <div class="settings-item-chevron">
@@ -310,6 +326,56 @@ function setupBarcodeSourceListeners() {
 
 function setupSettingsListeners() {
   setupBarcodeSourceListeners();
+
+  const getAppLaunchUrl = () => {
+    const path = window.location.pathname || '/';
+    return `${window.location.origin}${path}`;
+  };
+
+  const copyAppUrlToClipboard = async () => {
+    const url = getAppLaunchUrl();
+    if (!navigator.clipboard?.writeText) {
+      showModal('App URL', `<div style="font-size: 13px; word-break: break-all; color: var(--color-text-secondary);">${url}</div>`);
+      return false;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      return true;
+    } catch {
+      showModal('App URL', `<div style="font-size: 13px; word-break: break-all; color: var(--color-text-secondary);">${url}</div>`);
+      return false;
+    }
+  };
+
+  document.getElementById('settings-open-external')?.addEventListener('click', async () => {
+    const url = getAppLaunchUrl();
+    let opened = false;
+    try {
+      const win = window.open(url, '_blank', 'noopener,noreferrer');
+      opened = !!win;
+    } catch {
+      opened = false;
+    }
+
+    if (opened) {
+      showToast('Opened in new browser tab', 'success');
+      return;
+    }
+
+    const copied = await copyAppUrlToClipboard();
+    if (copied) {
+      showToast('Popup blocked — URL copied to clipboard', 'warning');
+    } else {
+      showToast('Could not open automatically. Copy URL manually.', 'warning');
+    }
+  });
+
+  document.getElementById('settings-copy-app-url')?.addEventListener('click', async () => {
+    const copied = await copyAppUrlToClipboard();
+    if (copied) {
+      showToast('App URL copied', 'success');
+    }
+  });
 
   // Dashboard chores toggle
   document.getElementById('settings-dash-chores')?.addEventListener('change', (e) => {
