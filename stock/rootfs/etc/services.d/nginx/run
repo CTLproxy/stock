@@ -1,0 +1,4 @@
+#!/usr/bin/with-contenv bashio
+# s6 service: run nginx in foreground
+bashio::log.info "Starting Stock PWA (nginx) on port 80…"
+exec nginx -g 'daemon off;'

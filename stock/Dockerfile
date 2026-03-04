@@ -16,7 +16,4 @@ RUN apk add --no-cache nginx
 
 COPY --from=builder /app/dist /var/www/html
 COPY nginx.conf /etc/nginx/http.d/default.conf
-COPY run.sh /run.sh
-RUN chmod +x /run.sh
-
-CMD ["/run.sh"]
+COPY rootfs /
