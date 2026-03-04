@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.8
+
+- Fix add-on startup crash when Grocy hostname is not resolvable at nginx boot
+- Use request-time DNS resolution for `/proxy/grocy/` upstream
+
 ## 1.0.7
 
 - Add internal add-on proxy route `/proxy/grocy/` from Stock to Grocy inside HA network
