@@ -1,7 +1,7 @@
 /**
  * Service Worker — Cache-first for app shell, network-first for API
  */
-const CACHE_NAME = 'stock-pwa-v1';
+const CACHE_NAME = 'stock-pwa-v2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -42,6 +42,11 @@ self.addEventListener('fetch', (event) => {
 
   // Skip chrome-extension, data URIs, etc.
   if (!url.protocol.startsWith('http')) return;
+
+  // Do not intercept HA ingress/proxy traffic; let browser handle it directly.
+  if (url.pathname.includes('/api/hassio_ingress/') || url.pathname.includes('/proxy/grocy/')) {
+    return;
+  }
 
   // API requests → network-first
   if (url.pathname.includes('/api/')) {

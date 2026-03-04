@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.11
+
+- Use relative HA ingress API paths in browser mode to avoid absolute URL fetch failures
+- Exclude HA ingress and internal proxy routes from Service Worker interception
+- Reduce false "Load failed" errors during HA Ingress connectivity test
+
 ## 1.0.10
 
 - Accept HA ingress connection test when probe confirms `/api/system/info` returns 200

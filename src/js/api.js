@@ -474,7 +474,10 @@ class GrocyAPI {
       // Step 4 — Hit Grocy API through ingress
       onStep(4, 'pending', 'Connecting to Grocy…');
       try {
-        const infoUrl = this._proxyUrl(`${this.baseUrl}/api/system/info`);
+        const infoRaw = (this.mode === 'ha_ingress' && this._ingressEntry && !this._useDevProxy)
+          ? `${this._ingressEntry}/api/system/info`
+          : `${this.baseUrl}/api/system/info`;
+        const infoUrl = this.mode === 'ha_ingress' ? this._proxyUrl(infoRaw) : infoRaw;
         const res = await fetch(infoUrl, {
           method: 'GET',
           headers: this._getHeaders(),
@@ -498,7 +501,9 @@ class GrocyAPI {
         return { success: true, slug, version };
       } catch (e) {
         // Probe common path variants to help diagnose
-        const probeBase = `${this.haUrl}${this._ingressEntry}`;
+        const probeBase = (this._ingressEntry && !this._useDevProxy)
+          ? this._ingressEntry
+          : `${this.haUrl}${this._ingressEntry}`;
         const probePaths = [
           '/api/system/info',      // standard
           '/system/info',          // no /api prefix
@@ -507,7 +512,8 @@ class GrocyAPI {
         let probeResults = [];
         for (const pp of probePaths) {
           try {
-            const pUrl = this._proxyUrl(`${probeBase}${pp}`);
+            const pRaw = `${probeBase}${pp}`;
+            const pUrl = this.mode === 'ha_ingress' ? this._proxyUrl(pRaw) : pRaw;
             const pRes = await fetch(pUrl, {
               headers: this._getHeaders(),
               credentials: 'include',
@@ -638,7 +644,9 @@ class GrocyAPI {
       await this._ensureIngressSession();
     }
 
-    const rawUrl = `${this.baseUrl}/api${path}`;
+    const rawUrl = (this.mode === 'ha_ingress' && this._ingressEntry && !this._useDevProxy)
+      ? `${this._ingressEntry}/api${path}`
+      : `${this.baseUrl}/api${path}`;
     const url = this.mode === 'ha_ingress' ? this._proxyUrl(rawUrl) : rawUrl;
 
     if (useCache && method === 'GET') {
