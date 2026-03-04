@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2
+
+- Fix nginx root path for `nginx:stable-alpine` image to resolve Web UI 500 error on ingress open
+
 ## 1.0.1
 
 - Remove legacy duplicate add-on folder that used s6-based startup
