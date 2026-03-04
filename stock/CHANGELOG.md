@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.12
+
+- Disable and unregister Service Worker when app runs inside HA ingress context
+- Prevent post-connection "Failed to load" errors across views caused by SW/API route interference
+
 ## 1.0.11
 
 - Use relative HA ingress API paths in browser mode to avoid absolute URL fetch failures

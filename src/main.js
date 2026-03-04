@@ -328,9 +328,24 @@ function setupConnectivityBanner() {
 }
 
 /* ---------- Service Worker ---------- */
+const isHAIngressContext = (location.pathname || '').includes('/api/hassio_ingress/');
+
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   window.addEventListener('load', async () => {
     try {
+      if (isHAIngressContext) {
+        // In HA ingress mode, SW can interfere with API routes and cause "Failed to load".
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys
+            .filter((k) => k.startsWith('stock-pwa-'))
+            .map((k) => caches.delete(k)));
+        }
+        return;
+      }
+
       const reg = await navigator.serviceWorker.register('./sw.js');
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing;
