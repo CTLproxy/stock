@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.7
+
+- Add internal add-on proxy route `/proxy/grocy/` from Stock to Grocy inside HA network
+- Add Settings action "Use Internal HA Grocy Proxy" for API-key-only connection setup
+
+## 1.0.6
+
+- Reuse current browser HA ingress context when creating new ingress session fails
+- Prevent HA Ingress setup failure with "Session failed: Load failed" on custom-domain/Nabu Casa paths
+
 ## 1.0.5
 
 - Prefer WebSocket-based ingress session creation, with REST fallback

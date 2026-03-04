@@ -230,6 +230,11 @@ class GrocyAPI {
       return this._ingressSession;
     }
 
+    // If already running inside HA ingress, reuse current browser ingress path
+    if (this._adoptCurrentIngressContext()) {
+      return this._ingressSession;
+    }
+
     // Deduplicate concurrent callers
     if (this._sessionPromise) return this._sessionPromise;
 
@@ -347,6 +352,24 @@ class GrocyAPI {
     }
   }
 
+  _adoptCurrentIngressContext() {
+    try {
+      const path = window.location?.pathname || '';
+      const match = path.match(/\/api\/hassio_ingress\/[^/]+/);
+      if (!match) return false;
+
+      const entry = match[0];
+      const origin = window.location?.origin || this.haUrl;
+      this._ingressEntry = entry;
+      this._ingressSession = 'browser-context';
+      this._sessionExpiry = Date.now() + 5 * 60 * 1000;
+      this.baseUrl = `${origin}${entry}`;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   /* -------- HA Diagnostic Helpers -------- */
 
   /**
@@ -440,8 +463,12 @@ class GrocyAPI {
         await this._createIngressSession();
         onStep(3, 'ok', 'Session created');
       } catch (e) {
-        onStep(3, 'error', `Session failed: ${e.message}`);
-        throw new Error(`Could not create ingress session for ${slug}: ${e.message}`);
+        if (this._adoptCurrentIngressContext()) {
+          onStep(3, 'ok', 'Using current HA ingress session');
+        } else {
+          onStep(3, 'error', `Session failed: ${e.message}`);
+          throw new Error(`Could not create ingress session for ${slug}: ${e.message}`);
+        }
       }
 
       // Step 4 — Hit Grocy API through ingress

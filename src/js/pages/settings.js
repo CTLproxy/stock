@@ -38,6 +38,10 @@ export function renderSettings() {
           <label class="form-label">Server URL</label>
           <input type="url" id="settings-url" class="form-input" value="${serverUrl}" placeholder="http://192.168.1.x:9283" autocomplete="url" autocapitalize="none" autocorrect="off" spellcheck="false">
           <div class="form-hint">Direct URL to your Grocy instance (including port)</div>
+          <div style="margin-top: 8px;">
+            <button class="btn btn-secondary" id="settings-use-internal-proxy" style="width: 100%;">Use Internal HA Grocy Proxy</button>
+          </div>
+          <div class="form-hint" style="margin-top: 6px;">When running inside Home Assistant add-on UI, this uses the internal add-on network path and requires only Grocy API key.</div>
         </div>
         <div class="form-group">
           <label class="form-label">API Key</label>
@@ -332,6 +336,11 @@ function setupSettingsListeners() {
     return `${window.location.origin}${path}`;
   };
 
+  const getInternalProxyUrl = () => {
+    const path = (window.location.pathname || '/').replace(/\/+$/, '');
+    return `${window.location.origin}${path}/proxy/grocy`;
+  };
+
   const copyAppUrlToClipboard = async () => {
     const url = getAppLaunchUrl();
     if (!navigator.clipboard?.writeText) {
@@ -375,6 +384,13 @@ function setupSettingsListeners() {
     if (copied) {
       showToast('App URL copied', 'success');
     }
+  });
+
+  document.getElementById('settings-use-internal-proxy')?.addEventListener('click', () => {
+    const urlInput = document.getElementById('settings-url');
+    if (!urlInput) return;
+    urlInput.value = getInternalProxyUrl();
+    showToast('Internal proxy URL applied. Enter Grocy API key and connect.', 'success');
   });
 
   // Dashboard chores toggle
