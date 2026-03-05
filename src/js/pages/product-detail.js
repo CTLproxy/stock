@@ -634,7 +634,7 @@ function setupActionButtons() {
         <label class="form-label">Amount</label>
         <div class="number-stepper">
           <button class="stepper-btn" data-action="decrement">\u2212</button>
-          <input type="number" id="modal-amount" class="stepper-value" value="1" min="0.01" step="1">
+          <input type="number" id="modal-amount" class="stepper-value" value="1" min="1" step="1">
           <button class="stepper-btn" data-action="increment">+</button>
         </div>
       </div>
@@ -674,7 +674,7 @@ function setupActionButtons() {
         <label class="form-label">Amount <span id="action-max-label">(max ${formatAmount(totalAmount)})</span></label>
         <div class="number-stepper">
           <button class="stepper-btn" data-action="decrement">\u2212</button>
-          <input type="number" id="modal-amount" class="stepper-value" value="1" min="0.01" max="${totalAmount}" step="1">
+          <input type="number" id="modal-amount" class="stepper-value" value="1" min="1" max="${totalAmount}" step="1">
           <button class="stepper-btn" data-action="increment">+</button>
         </div>
       </div>
@@ -706,7 +706,7 @@ function setupActionButtons() {
         <label class="form-label">Amount to open <span id="action-max-label">(max ${formatAmount(unopened)})</span></label>
         <div class="number-stepper">
           <button class="stepper-btn" data-action="decrement">\u2212</button>
-          <input type="number" id="modal-amount" class="stepper-value" value="1" min="0.01" max="${unopened}" step="1">
+          <input type="number" id="modal-amount" class="stepper-value" value="1" min="1" max="${unopened}" step="1">
           <button class="stepper-btn" data-action="increment">+</button>
         </div>
       </div>
@@ -869,6 +869,9 @@ function showTransferModal() {
 }
 
 function setupStepperAndConfirm(action) {
+  const integerAmountActions = new Set(['purchase', 'consume', 'open', 'transfer']);
+  const requiresIntegerAmount = integerAmountActions.has(action);
+
   document.querySelectorAll('.stepper-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const input = document.getElementById('modal-amount');
@@ -878,13 +881,19 @@ function setupStepperAndConfirm(action) {
       if (btn.dataset.action === 'increment') val += step;
       else val = Math.max(parseFloat(input.min) || 0, val - step);
       if (input.max && val > parseFloat(input.max)) val = parseFloat(input.max);
+      if (requiresIntegerAmount) val = Math.floor(val);
       input.value = val;
     });
   });
 
   document.getElementById('modal-confirm')?.addEventListener('click', async () => {
-    const amount = parseFloat(document.getElementById('modal-amount')?.value || 0);
-    if (amount <= 0 && action !== 'inventory') { showToast('Enter a valid amount', 'error'); return; }
+    const amountRaw = document.getElementById('modal-amount')?.value || '0';
+    const amount = requiresIntegerAmount ? parseInt(amountRaw, 10) : parseFloat(amountRaw);
+    if (!Number.isFinite(amount) || (amount <= 0 && action !== 'inventory')) { showToast('Enter a valid amount', 'error'); return; }
+    if (requiresIntegerAmount && (!Number.isInteger(Number(amountRaw)) || amount < 1)) {
+      showToast('Amount must be a whole number (minimum 1)', 'error');
+      return;
+    }
 
     const confirmBtn = document.getElementById('modal-confirm');
     if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Working\u2026'; }

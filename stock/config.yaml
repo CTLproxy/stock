@@ -3,6 +3,7 @@ description: A modern Progressive Web App client for Grocy grocery management
 version: 1.0.16
 slug: grocy-stock-pwa
 url: https://github.com/CTLproxy/stock
+documentation: https://github.com/CTLproxy/stock/blob/main/stock/README.md
 startup: application
 boot: auto
 arch:

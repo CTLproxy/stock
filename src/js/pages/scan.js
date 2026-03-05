@@ -226,7 +226,7 @@ async function handleKnownProduct(barcode, productData) {
             <label class="form-label">Amount</label>
             <div class="number-stepper">
               <button class="stepper-btn" data-action="decrement">−</button>
-              <input type="number" id="scan-amount" class="stepper-value" value="1" min="0.01" step="1">
+              <input type="number" id="scan-amount" class="stepper-value" value="1" min="1" step="1">
               <button class="stepper-btn" data-action="increment">+</button>
             </div>
           </div>
@@ -242,7 +242,12 @@ async function handleKnownProduct(barcode, productData) {
       `);
       setupScanStepper();
       document.getElementById('scan-confirm')?.addEventListener('click', async () => {
-        const amount = parseFloat(document.getElementById('scan-amount')?.value || 1);
+        const amountRaw = document.getElementById('scan-amount')?.value || '1';
+        const amount = parseInt(amountRaw, 10);
+        if (!Number.isInteger(Number(amountRaw)) || !Number.isFinite(amount) || amount < 1) {
+          showToast('Amount must be a whole number (minimum 1)', 'error');
+          return;
+        }
         const date = document.getElementById('scan-date')?.value || todayStr();
         try {
           await api.addProductToStock(product.id, amount, date);

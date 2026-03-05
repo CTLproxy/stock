@@ -60,6 +60,7 @@ export function renderShopping() {
       <div class="select-toolbar" id="select-toolbar">
         <span class="select-count" id="select-count">0 selected</span>
         <div style="display:flex;gap:6px;">
+          <button class="btn btn-sm btn-secondary" id="select-toggle-all">Select All</button>
           <button class="btn btn-sm btn-secondary" id="select-unmark">Unmark</button>
           <button class="btn btn-sm btn-danger" id="select-delete">Delete</button>
         </div>
@@ -168,6 +169,23 @@ function setupShoppingListeners() {
       showToast('Failed to unmark items', 'error');
     }
   });
+
+  document.getElementById('select-toggle-all')?.addEventListener('click', () => {
+    if (_shoppingItems.length === 0) {
+      showToast('No items to select', 'info');
+      return;
+    }
+
+    const allSelected = _selectedIds.size === _shoppingItems.length;
+    if (allSelected) {
+      _selectedIds.clear();
+    } else {
+      _selectedIds = new Set(_shoppingItems.map(item => String(item.id)));
+    }
+
+    renderShoppingList();
+    updateSelectToolbar();
+  });
 }
 
 function updateSelectToolbar() {
@@ -175,6 +193,11 @@ function updateSelectToolbar() {
   if (toolbar) toolbar.classList.toggle('visible', _selectMode);
   const countEl = document.getElementById('select-count');
   if (countEl) countEl.textContent = `${_selectedIds.size} selected`;
+  const toggleAllBtn = document.getElementById('select-toggle-all');
+  if (toggleAllBtn) {
+    const allSelected = _shoppingItems.length > 0 && _selectedIds.size === _shoppingItems.length;
+    toggleAllBtn.textContent = allSelected ? 'De-select All' : 'Select All';
+  }
 }
 
 /* ================================================================
@@ -447,7 +470,7 @@ function showPurchaseCard(item, productMap, quMap) {
       <label class="form-label">Amount</label>
       <div class="number-stepper">
         <button class="stepper-btn" data-action="decrement">−</button>
-        <input type="number" id="modal-amount" class="stepper-value" value="${defaultAmount}" min="0.01" step="1">
+        <input type="number" id="modal-amount" class="stepper-value" value="${Math.max(1, Math.round(defaultAmount))}" min="1" step="1">
         <button class="stepper-btn" data-action="increment">+</button>
       </div>
     </div>
@@ -472,15 +495,20 @@ function showPurchaseCard(item, productMap, quMap) {
         if (!input) return;
         let val = parseFloat(input.value) || 0;
         if (btn.dataset.action === 'increment') val += 1;
-        else val = Math.max(0.01, val - 1);
-        input.value = val;
+        else val = Math.max(1, val - 1);
+        input.value = Math.floor(val);
       });
     });
   }, 50);
 
   // Confirm
   document.getElementById('modal-confirm')?.addEventListener('click', async () => {
-    const amount = parseFloat(document.getElementById('modal-amount')?.value || 1);
+    const amountRaw = document.getElementById('modal-amount')?.value || '1';
+    const amount = parseInt(amountRaw, 10);
+    if (!Number.isInteger(Number(amountRaw)) || !Number.isFinite(amount) || amount < 1) {
+      showToast('Amount must be a whole number (minimum 1)', 'error');
+      return;
+    }
     const date = document.getElementById('modal-date')?.value || todayStr();
     const locationId = document.getElementById('modal-location')?.value;
     const confirmBtn = document.getElementById('modal-confirm');
