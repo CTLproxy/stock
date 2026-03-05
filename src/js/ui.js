@@ -75,8 +75,14 @@ function setupModalSwipeToDismiss(content, overlay) {
   let startY = 0;
   let currentY = 0;
   let isDragging = false;
+  let allowDrag = false;
 
   const onTouchStart = (e) => {
+    // Start dismiss drag only from the modal handle to avoid conflicts with list/input scrolling.
+    const target = e.target;
+    allowDrag = !!(target && target.closest && target.closest('.modal-handle'));
+    if (!allowDrag) return;
+
     // Only initiate drag if the content is scrolled to the top (or near top)
     if (content.scrollTop > 5) return;
     startY = e.touches[0].clientY;
@@ -87,6 +93,8 @@ function setupModalSwipeToDismiss(content, overlay) {
 
   const onTouchMove = (e) => {
     if (!isDragging) return;
+    // Prevent iOS/host app from dragging the whole webview when dismissing modal
+    e.preventDefault();
     currentY = e.touches[0].clientY;
     const deltaY = currentY - startY;
 
@@ -105,6 +113,7 @@ function setupModalSwipeToDismiss(content, overlay) {
   const onTouchEnd = () => {
     if (!isDragging) return;
     isDragging = false;
+    allowDrag = false;
     const deltaY = currentY - startY;
 
     if (deltaY > 100) {
@@ -134,7 +143,7 @@ function setupModalSwipeToDismiss(content, overlay) {
   };
 
   content.addEventListener('touchstart', onTouchStart, { passive: true });
-  content.addEventListener('touchmove', onTouchMove, { passive: true });
+  content.addEventListener('touchmove', onTouchMove, { passive: false });
   content.addEventListener('touchend', onTouchEnd, { passive: true });
 }
 

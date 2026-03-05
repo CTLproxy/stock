@@ -1164,7 +1164,9 @@ class GrocyAPI {
       await this._ensureIngressSession();
     }
     const encoded = btoa(unescape(encodeURIComponent(fileName)));
-    const rawUrl = `${this.baseUrl}/api/files/${group}/${encoded}`;
+    const rawUrl = (this.mode === 'ha_ingress' && this._ingressEntry && !this._useDevProxy)
+      ? `${this._ingressEntry}/api/files/${group}/${encoded}`
+      : `${this.baseUrl}/api/files/${group}/${encoded}`;
     const url = this.mode === 'ha_ingress' ? this._proxyUrl(rawUrl) : rawUrl;
     const headers = this.mode === 'ha_ingress'
       ? { 'Authorization': `Bearer ${this.haToken}`, ...(this.apiKey ? { 'GROCY-API-KEY': this.apiKey } : {}) }
@@ -1187,7 +1189,9 @@ class GrocyAPI {
       await this._ensureIngressSession();
     }
     const encoded = btoa(unescape(encodeURIComponent(fileName)));
-    const rawUrl = `${this.baseUrl}/api/files/${group}/${encoded}`;
+    const rawUrl = (this.mode === 'ha_ingress' && this._ingressEntry && !this._useDevProxy)
+      ? `${this._ingressEntry}/api/files/${group}/${encoded}`
+      : `${this.baseUrl}/api/files/${group}/${encoded}`;
     const url = this.mode === 'ha_ingress' ? this._proxyUrl(rawUrl) : rawUrl;
     const headers = this.mode === 'ha_ingress'
       ? { 'Authorization': `Bearer ${this.haToken}`, ...(this.apiKey ? { 'GROCY-API-KEY': this.apiKey } : {}) }
@@ -1206,7 +1210,9 @@ class GrocyAPI {
     if (!fileName) return null;
     const encoded = btoa(unescape(encodeURIComponent(fileName)));
     const qs = forceAsPicture ? '?force_serve_as=picture' : '';
-    const raw = `${this.baseUrl}/api/files/${group}/${encoded}${qs}`;
+    const raw = (this.mode === 'ha_ingress' && this._ingressEntry && !this._useDevProxy)
+      ? `${this._ingressEntry}/api/files/${group}/${encoded}${qs}`
+      : `${this.baseUrl}/api/files/${group}/${encoded}${qs}`;
     return this.mode === 'ha_ingress' ? this._proxyUrl(raw) : raw;
   }
 
@@ -1219,7 +1225,9 @@ class GrocyAPI {
       await this._ensureIngressSession();
     }
     const encoded = btoa(unescape(encodeURIComponent(fileName)));
-    const rawUrl = `${this.baseUrl}/api/files/${group}/${encoded}`;
+    const rawUrl = (this.mode === 'ha_ingress' && this._ingressEntry && !this._useDevProxy)
+      ? `${this._ingressEntry}/api/files/${group}/${encoded}`
+      : `${this.baseUrl}/api/files/${group}/${encoded}`;
     const url = this.mode === 'ha_ingress' ? this._proxyUrl(rawUrl) : rawUrl;
     const headers = this.mode === 'ha_ingress'
       ? { 'Authorization': `Bearer ${this.haToken}`, ...(this.apiKey ? { 'GROCY-API-KEY': this.apiKey } : {}) }

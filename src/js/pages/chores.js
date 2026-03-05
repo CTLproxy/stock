@@ -142,6 +142,12 @@ function localDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
+function dayDiffLocal(fromDate, toDate) {
+  const from = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+  const to = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+  return Math.round((to - from) / (1000 * 60 * 60 * 24));
+}
+
 function getDueBadgeClass(dateStr) {
   if (!dateStr) return 'badge-neutral';
   const date = new Date(dateStr);
@@ -150,7 +156,7 @@ function getDueBadgeClass(dateStr) {
   const todayStr = localDateStr(now);
   if (dueStr < todayStr) return 'badge-overdue';
   if (dueStr === todayStr) return 'badge-warning';
-  const diffDays = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+  const diffDays = dayDiffLocal(now, date);
   if (diffDays <= 3) return 'badge-warning';
   return 'badge-ok';
 }
@@ -162,11 +168,11 @@ function formatDue(dateStr) {
   const dueStr = localDateStr(date);
   const todayStr = localDateStr(now);
   if (dueStr < todayStr) {
-    const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+    const diffDays = dayDiffLocal(date, now);
     return `${diffDays}d overdue`;
   }
   if (dueStr === todayStr) return 'Due today';
-  const diffDays = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+  const diffDays = dayDiffLocal(now, date);
   if (diffDays === 1) return 'Tomorrow';
   if (diffDays < 7) return `In ${diffDays}d`;
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });

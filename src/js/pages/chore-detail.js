@@ -23,6 +23,12 @@ const PERIOD_LABELS = {
   yearly: 'Yearly',
 };
 
+function dayDiffLocal(fromDate, toDate) {
+  const from = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+  const to = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+  return Math.round((to - from) / (1000 * 60 * 60 * 24));
+}
+
 /* =================================================================
    Public: Render chore detail (view / edit)
    ================================================================= */
@@ -116,12 +122,12 @@ function renderView() {
     const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     const dueStr = `${due.getFullYear()}-${String(due.getMonth()+1).padStart(2,'0')}-${String(due.getDate()).padStart(2,'0')}`;
     if (dueStr < todayStr) {
-      const diffDays = Math.floor((now - due) / (1000 * 60 * 60 * 24));
+      const diffDays = dayDiffLocal(due, now);
       statusText = `${diffDays}d overdue`; statusColor = 'red';
     }
     else if (dueStr === todayStr) { statusText = 'Due today'; statusColor = 'orange'; }
     else {
-      const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+      const diffDays = dayDiffLocal(now, due);
       if (diffDays <= 3) { statusText = `Due in ${diffDays}d`; statusColor = 'orange'; }
       else { statusText = `Due in ${diffDays}d`; statusColor = 'green'; }
     }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.14
+
+- Fix duplicate chore dashboard widgets caused by overlapping async renders
+- Fix chore due-status day calculations to use calendar-day differences (avoid off-by-one)
+- Fix equipment file load/remove/open in HA ingress mode using relative ingress file paths
+- Improve modal swipe-to-dismiss UX: handle-only drag, safer scroll behavior, reduced parent view drag in iOS HA app
+
 ## 1.0.13
 
 - Fix HA ingress runtime API routing: stop reusing current browser ingress path for normal API calls

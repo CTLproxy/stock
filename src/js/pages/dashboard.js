@@ -10,6 +10,8 @@ import {
 } from '../ui.js';
 import { setRefreshHandler } from '../pull-to-refresh.js';
 
+let _dashRenderSeq = 0;
+
 export function renderDashboard() {
   setHeader('Dashboard', false);
 
@@ -141,6 +143,7 @@ async function loadDashboardData() {
 }
 
 function renderStats(stock, volatile) {
+  const renderSeq = ++_dashRenderSeq;
   const totalProducts = stock.length;
   const expiringSoon = (volatile.due_products || []).length;
   const expired = (volatile.expired_products || []).length + (volatile.overdue_products || []).length;
@@ -192,11 +195,17 @@ function renderStats(stock, volatile) {
 
   // Chore widgets (if enabled in settings)
   if (store.get('dashboardShowChores')) {
-    loadChoreWidgets();
+    loadChoreWidgets(renderSeq);
   }
 }
 
-async function loadChoreWidgets() {
+function dayDiffLocal(fromDate, toDate) {
+  const from = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+  const to = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+  return Math.round((to - from) / (1000 * 60 * 60 * 24));
+}
+
+async function loadChoreWidgets(renderSeq) {
   const statsEl = document.getElementById('dash-stats');
   if (!statsEl) return;
 
@@ -222,16 +231,19 @@ async function loadChoreWidgets() {
       const dueStr = `${dueDate.getFullYear()}-${String(dueDate.getMonth()+1).padStart(2,'0')}-${String(dueDate.getDate()).padStart(2,'0')}`;
       if (dueStr < todayStr) missedCount++;
       else if (dueStr === todayStr) plannedCount++;
-      else {
-        // Future: check if within 24 hours
-        const diffHours = (dueDate - now) / (1000 * 60 * 60);
-        if (diffHours <= 24) plannedCount++;
-      }
+      else if (dayDiffLocal(now, dueDate) <= 1) plannedCount++;
     }
+
+    // If a newer dashboard render happened while we were loading, ignore this stale result
+    if (renderSeq !== _dashRenderSeq) return;
+
+    // Remove old chore widget cards before adding fresh ones
+    statsEl.querySelectorAll('.stat-card--chore-widget').forEach((el) => el.remove());
 
     // Append chore widget cards to existing grid
     const plannedCard = document.createElement('div');
-    plannedCard.className = 'stat-card';
+    plannedCard.className = 'stat-card stat-card--chore-widget';
+    plannedCard.id = 'dash-chore-due-widget';
     plannedCard.onclick = () => { location.hash = '/chores'; };
     plannedCard.innerHTML = `
       <div class="stat-icon orange">
@@ -246,7 +258,8 @@ async function loadChoreWidgets() {
     `;
 
     const missedCard = document.createElement('div');
-    missedCard.className = 'stat-card';
+    missedCard.className = 'stat-card stat-card--chore-widget';
+    missedCard.id = 'dash-chore-missed-widget';
     missedCard.onclick = () => { location.hash = '/chores'; };
     missedCard.innerHTML = `
       <div class="stat-icon red">
