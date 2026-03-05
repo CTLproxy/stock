@@ -67,6 +67,7 @@ function renderView() {
   const hasManual = !!manualFile;
   const isImage = hasManual && /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(manualFile);
   const isPdf = hasManual && /\.pdf$/i.test(manualFile);
+  const isText = hasManual && /\.(txt|md)$/i.test(manualFile);
 
   renderPage(`
     <div class="detail-hero">
@@ -88,7 +89,7 @@ function renderView() {
       ${hasManual ? `
         <div class="card" style="padding:12px;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-            <span style="font-size:24px;">${isImage ? '🖼️' : isPdf ? '📕' : '📄'}</span>
+            <span style="font-size:24px;">${isImage ? '🖼️' : isPdf ? '📕' : isText ? '📝' : '📄'}</span>
             <span style="flex:1;word-break:break-all;font-size:14px;font-weight:500;">${escapeHtml(manualFile)}</span>
           </div>
           <div id="manual-preview-container" style="margin-bottom:10px;text-align:center;min-height:40px;">
@@ -109,7 +110,7 @@ function renderView() {
             <label class="btn btn-secondary" style="cursor:pointer;flex:1;min-width:120px;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
               Upload File
-              <input type="file" id="file-upload" accept="image/*,.pdf,.doc,.docx,.txt" style="display:none;">
+              <input type="file" id="file-upload" accept="image/*,.pdf,.txt,.md" style="display:none;">
             </label>
             <label class="btn btn-secondary" style="cursor:pointer;flex:1;min-width:120px;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -140,7 +141,7 @@ function renderView() {
   // If there's a manual file, load it as a blob for preview and open
   let _blobUrl = null;
   if (hasManual) {
-    loadFilePreview(manualFile, isImage, isPdf).then(blobUrl => {
+    loadFilePreview(manualFile, isImage, isPdf, isText).then(blobUrl => {
       _blobUrl = blobUrl;
     });
   }
@@ -148,8 +149,24 @@ function renderView() {
   // Open file in new tab / external app
   document.getElementById('btn-open-file')?.addEventListener('click', async () => {
     const btn = document.getElementById('btn-open-file');
+    const openFileUrl = (url) => {
+      const win = window.open(url, '_blank');
+      if (win) return;
+      try {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = manualFile;
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch {
+        window.location.href = url;
+      }
+    };
+
     if (_blobUrl) {
-      window.open(_blobUrl, '_blank');
+      openFileUrl(_blobUrl);
       return;
     }
     // If blob not loaded yet, fetch now
@@ -157,7 +174,7 @@ function renderView() {
     try {
       const blob = await api.fetchFileAsBlob('equipmentmanuals', manualFile);
       _blobUrl = URL.createObjectURL(blob);
-      window.open(_blobUrl, '_blank');
+      openFileUrl(_blobUrl);
     } catch (e) {
       showToast('Could not open file: ' + e.message, 'error');
     } finally {
@@ -200,7 +217,7 @@ function renderView() {
  * Fetch the file via authenticated API call and show preview.
  * Returns the blob URL for reuse by the Open button.
  */
-async function loadFilePreview(fileName, isImage, isPdf) {
+async function loadFilePreview(fileName, isImage, isPdf, isText) {
   const container = document.getElementById('manual-preview-container');
   if (!container) return null;
 
@@ -226,10 +243,13 @@ async function loadFilePreview(fileName, isImage, isPdf) {
         });
       });
     } else if (isPdf) {
+      container.innerHTML = `<iframe src="${blobUrl}" title="PDF preview" style="width:100%;height:320px;border:0;border-radius:var(--radius-md);background:#fff;"></iframe>`;
+    } else if (isText) {
+      const text = await blob.text();
+      const safe = escapeHtml(text.length > 20000 ? `${text.slice(0, 20000)}\n\n…(truncated)` : text);
       container.innerHTML = `
-        <div style="background:var(--color-glass);border-radius:var(--radius-md);padding:16px;">
-          <div style="font-size:36px;margin-bottom:4px;">📕</div>
-          <div style="font-size:13px;color:var(--color-text-secondary);">PDF document ready</div>
+        <div style="background:var(--color-glass);border-radius:var(--radius-md);padding:12px;max-height:320px;overflow:auto;">
+          <pre style="margin:0;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,monospace;font-size:12px;line-height:1.45;color:var(--color-text-primary);">${safe}</pre>
         </div>`;
     } else {
       container.innerHTML = `
@@ -299,7 +319,7 @@ function renderEditForm(data) {
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <label class="btn btn-secondary" style="cursor:pointer;flex:1;min-width:120px;text-align:center;">
               📎 Upload File
-              <input type="file" id="edit-file-upload" accept="image/*,.pdf,.doc,.docx,.txt" style="display:none;">
+              <input type="file" id="edit-file-upload" accept="image/*,.pdf,.txt,.md" style="display:none;">
             </label>
             <label class="btn btn-secondary" style="cursor:pointer;flex:1;min-width:120px;text-align:center;">
               📷 Take Photo

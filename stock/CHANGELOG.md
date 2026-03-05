@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.15
+
+- Equipment: improve Open File fallback behavior for HA native iOS client
+- Equipment: add `.md` support and lightweight inline preview for PDF/TXT/MD files
+- Modals: in HA native client, replace drag handle with explicit close button and disable swipe-dismiss
+- Recipes: replace ingredient product dropdown with searchable picker list
+
 ## 1.0.14
 
 - Fix duplicate chore dashboard widgets caused by overlapping async renders

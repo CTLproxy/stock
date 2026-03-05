@@ -31,6 +31,15 @@ export function showToast(message, type = 'info', duration = 3000) {
 // --- Modal ---
 let _modalCloseHandler = null;
 
+function isHANativeClient() {
+  try {
+    const ua = navigator.userAgent || '';
+    return /Home\s*Assistant|HomeAssistant/i.test(ua);
+  } catch {
+    return false;
+  }
+}
+
 export function showModal(titleOrHtml, contentHtml, onClose) {
   const overlay = document.getElementById('modal-overlay');
   const content = document.getElementById('modal-content');
@@ -51,9 +60,17 @@ export function showModal(titleOrHtml, contentHtml, onClose) {
   }
 
   const titleBlock = title ? `<div class="modal-title">${title}</div>` : '';
-  content.innerHTML = `<div class="modal-handle"></div>${titleBlock}${body}`;
+  const nativeHA = isHANativeClient();
+  const topControls = nativeHA
+    ? `<div style="display:flex;justify-content:flex-end;margin-bottom:8px;"><button type="button" class="btn btn-secondary" id="modal-close-btn" style="padding:6px 10px;min-height:auto;line-height:1;">✕</button></div>`
+    : '<div class="modal-handle"></div>';
+  content.innerHTML = `${topControls}${titleBlock}${body}`;
   onClose = closeCb;
   overlay.style.display = 'flex';
+
+  if (nativeHA) {
+    document.getElementById('modal-close-btn')?.addEventListener('click', () => closeModal());
+  }
 
   // Close on overlay click (not content)
   const handler = (e) => {
@@ -68,7 +85,9 @@ export function showModal(titleOrHtml, contentHtml, onClose) {
   };
 
   // Swipe-down to dismiss — works from anywhere on the modal sheet
-  setupModalSwipeToDismiss(content, overlay);
+  if (!nativeHA) {
+    setupModalSwipeToDismiss(content, overlay);
+  }
 }
 
 function setupModalSwipeToDismiss(content, overlay) {

@@ -273,11 +273,6 @@ function renderView() {
    ADD INGREDIENT MODAL
    ================================================================= */
 function showAddIngredientModal() {
-  const productOptions = _products
-    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-    .map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`)
-    .join('');
-
   const quOptions = _quantityUnits
     .map(q => `<option value="${q.id}">${escapeHtml(q.name)}</option>`)
     .join('');
@@ -285,10 +280,18 @@ function showAddIngredientModal() {
   showModal('Add Ingredient', `
     <div class="form-group">
       <label class="form-label">Product *</label>
-      <select id="modal-product" class="form-input">
-        <option value="">-- Select --</option>
-        ${productOptions}
-      </select>
+      <div class="search-bar" style="margin-bottom: 0;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="modal-product-search" placeholder="Search products…" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+      </div>
+      <div id="modal-product-list" style="max-height: 34vh; overflow-y: auto; -webkit-overflow-scrolling: touch; margin-top: 8px;"></div>
+      <div id="modal-product-selected" style="display:none; margin-top:8px; padding:8px 10px; border-radius:var(--radius-md); background:var(--color-glass); font-size:13px;">
+        Selected: <strong id="modal-product-selected-name"></strong>
+        <button class="btn btn-secondary" id="modal-product-change" style="float:right; padding:4px 8px; min-height:auto;">Change</button>
+      </div>
+      <input type="hidden" id="modal-product">
     </div>
     <div class="form-group">
       <label class="form-label">Amount</label>
@@ -307,13 +310,73 @@ function showAddIngredientModal() {
     <button class="btn btn-primary" style="width:100%;" id="modal-confirm">Add Ingredient</button>
   `);
 
-  // Auto-select product's stock QU when product changes
-  document.getElementById('modal-product')?.addEventListener('change', (e) => {
-    const prod = _products.find(p => String(p.id) === String(e.target.value));
-    if (prod && prod.qu_id_stock) {
-      const quSel = document.getElementById('modal-qu');
-      if (quSel) quSel.value = prod.qu_id_stock;
+  const sortedProducts = [..._products].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  const renderProductSelector = (filter = '') => {
+    const listEl = document.getElementById('modal-product-list');
+    if (!listEl) return;
+
+    const q = (filter || '').toLowerCase().trim();
+    const filtered = q
+      ? sortedProducts.filter(p => (p.name || '').toLowerCase().includes(q))
+      : sortedProducts;
+
+    listEl.innerHTML = filtered.slice(0, 40).map(p => `
+      <div class="product-item" data-product-id="${p.id}" style="cursor:pointer;">
+        <div class="product-icon">📦</div>
+        <div class="product-info">
+          <div class="product-name">${escapeHtml(p.name)}</div>
+        </div>
+      </div>
+    `).join('');
+
+    listEl.querySelectorAll('.product-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const productId = item.dataset.productId;
+        const product = _products.find(p => String(p.id) === String(productId));
+        if (!product) return;
+
+        const productInput = document.getElementById('modal-product');
+        const selectedWrap = document.getElementById('modal-product-selected');
+        const selectedName = document.getElementById('modal-product-selected-name');
+        const searchEl = document.getElementById('modal-product-search');
+        if (productInput) productInput.value = productId;
+        if (selectedName) selectedName.textContent = product.name;
+        if (selectedWrap) selectedWrap.style.display = 'block';
+        if (searchEl) searchEl.parentElement.style.display = 'none';
+        listEl.style.display = 'none';
+
+        if (product.qu_id_stock) {
+          const quSel = document.getElementById('modal-qu');
+          if (quSel) quSel.value = String(product.qu_id_stock);
+        }
+      });
+    });
+  };
+
+  requestAnimationFrame(() => {
+    renderProductSelector();
+    const searchInput = document.getElementById('modal-product-search');
+    if (searchInput) {
+      const onSearch = () => renderProductSelector(searchInput.value);
+      searchInput.addEventListener('input', onSearch);
+      searchInput.addEventListener('keyup', onSearch);
+      searchInput.focus();
     }
+  });
+
+  document.getElementById('modal-product-change')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const selectedWrap = document.getElementById('modal-product-selected');
+    const searchEl = document.getElementById('modal-product-search');
+    const listEl = document.getElementById('modal-product-list');
+    const productInput = document.getElementById('modal-product');
+    if (selectedWrap) selectedWrap.style.display = 'none';
+    if (searchEl) {
+      searchEl.parentElement.style.display = 'flex';
+      searchEl.focus();
+    }
+    if (listEl) listEl.style.display = 'block';
+    if (productInput) productInput.value = '';
   });
 
   document.getElementById('modal-confirm')?.addEventListener('click', async () => {
