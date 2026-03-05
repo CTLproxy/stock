@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.16
+
+- Equipment: add tiny markdown renderer for `.md` preview (headings/lists/paragraphs)
+- Equipment: keep lightweight TXT preview and improve in-app file opening fallbacks
+- UI: allow tap-to-dismiss toast banners to avoid blocking controls
+- Scan: auto-start camera on scanner page with persistent Settings toggle
+
 ## 1.0.15
 
 - Equipment: improve Open File fallback behavior for HA native iOS client

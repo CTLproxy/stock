@@ -23,6 +23,7 @@ class Store {
       const grocyApiKey = await get('grocy_grocy_api_key');
       const barcodeSources = await get('grocy_barcode_sources');
       const dashboardShowChores = await get('grocy_dashboard_show_chores');
+      const scanAutoStartCamera = await get('grocy_scan_auto_start_camera');
 
       this._state = {
         serverUrl: serverUrl || '',
@@ -35,6 +36,7 @@ class Store {
         grocyApiKey: grocyApiKey || '',
         barcodeSources: barcodeSources || { primary: 'off_se', enabled: ['off_se', 'off_world', 'obf', 'opff', 'upcitemdb'] },
         dashboardShowChores: dashboardShowChores || 0,
+        scanAutoStartCamera: scanAutoStartCamera == null ? 1 : scanAutoStartCamera,
         isConnected: false,
         isOnline: navigator.onLine,
 
@@ -68,6 +70,7 @@ class Store {
         grocyApiKey: '',
         barcodeSources: { primary: 'off_se', enabled: ['off_se', 'off_world', 'obf', 'opff', 'upcitemdb'] },
         dashboardShowChores: 0,
+        scanAutoStartCamera: 1,
         isConnected: false,
         isOnline: navigator.onLine,
         products: [],
@@ -114,6 +117,7 @@ class Store {
       grocyApiKey: 'grocy_grocy_api_key',
       barcodeSources: 'grocy_barcode_sources',
       dashboardShowChores: 'grocy_dashboard_show_chores',
+      scanAutoStartCamera: 'grocy_scan_auto_start_camera',
     };
     if (persistMap[key]) {
       set(persistMap[key], value).catch(console.warn);

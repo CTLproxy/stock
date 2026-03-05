@@ -176,6 +176,13 @@ export function renderSettings() {
         <h2 class="section-title">App</h2>
       </div>
       <div class="settings-list">
+        <div class="settings-item">
+          <span>Auto-start camera on Scan page</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="settings-scan-autostart" ${store.get('scanAutoStartCamera') ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
         <div class="settings-item" id="settings-open-external" style="cursor: pointer;">
           <span>Open Outside HA UI</span>
           <div class="settings-item-chevron">
@@ -218,7 +225,7 @@ export function renderSettings() {
       <div class="settings-list">
         <div class="settings-item">
           <span>Stock PWA</span>
-          <span class="text-secondary">v1.0.15</span>
+          <span class="text-secondary">v1.0.16</span>
         </div>
         <div class="settings-item">
           <span>Built for</span>
@@ -412,6 +419,10 @@ function setupSettingsListeners() {
   // Dashboard chores toggle
   document.getElementById('settings-dash-chores')?.addEventListener('change', (e) => {
     store.set('dashboardShowChores', e.target.checked ? 1 : 0);
+  });
+
+  document.getElementById('settings-scan-autostart')?.addEventListener('change', (e) => {
+    store.set('scanAutoStartCamera', e.target.checked ? 1 : 0);
   });
 
   // Mode switcher

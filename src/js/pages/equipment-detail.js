@@ -13,6 +13,65 @@ let _editMode = false;
 let _isNew = false;
 let _attachedFiles = []; // { name, url, isImage } — files associated with this equipment
 
+function renderTinyMarkdown(text) {
+  const src = String(text || '').replace(/\r\n/g, '\n');
+  const lines = src.split('\n');
+  const out = [];
+  let inList = false;
+
+  const flushList = () => {
+    if (inList) {
+      out.push('</ul>');
+      inList = false;
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      flushList();
+      continue;
+    }
+
+    const h3 = trimmed.match(/^###\s+(.+)$/);
+    const h2 = trimmed.match(/^##\s+(.+)$/);
+    const h1 = trimmed.match(/^#\s+(.+)$/);
+    const li = trimmed.match(/^[-*]\s+(.+)$/);
+
+    if (h3) {
+      flushList();
+      out.push(`<h3 style="margin:10px 0 6px;font-size:14px;line-height:1.35;">${escapeHtml(h3[1])}</h3>`);
+      continue;
+    }
+    if (h2) {
+      flushList();
+      out.push(`<h2 style="margin:12px 0 6px;font-size:15px;line-height:1.35;">${escapeHtml(h2[1])}</h2>`);
+      continue;
+    }
+    if (h1) {
+      flushList();
+      out.push(`<h1 style="margin:14px 0 8px;font-size:16px;line-height:1.35;">${escapeHtml(h1[1])}</h1>`);
+      continue;
+    }
+    if (li) {
+      if (!inList) {
+        out.push('<ul style="margin:8px 0 8px 18px;padding:0;">');
+        inList = true;
+      }
+      out.push(`<li style="margin:4px 0;">${escapeHtml(li[1])}</li>`);
+      continue;
+    }
+
+    flushList();
+    out.push(`<p style="margin:6px 0;">${escapeHtml(trimmed)}</p>`);
+  }
+
+  flushList();
+  return out.join('');
+}
+
 /* =================================================================
    Public: Render equipment detail
    ================================================================= */
@@ -246,10 +305,14 @@ async function loadFilePreview(fileName, isImage, isPdf, isText) {
       container.innerHTML = `<iframe src="${blobUrl}" title="PDF preview" style="width:100%;height:320px;border:0;border-radius:var(--radius-md);background:#fff;"></iframe>`;
     } else if (isText) {
       const text = await blob.text();
-      const safe = escapeHtml(text.length > 20000 ? `${text.slice(0, 20000)}\n\n…(truncated)` : text);
+      const truncated = text.length > 20000 ? `${text.slice(0, 20000)}\n\n…(truncated)` : text;
+      const isMd = /\.md$/i.test(fileName || '');
+      const rendered = isMd
+        ? renderTinyMarkdown(truncated)
+        : `<pre style="margin:0;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,monospace;font-size:12px;line-height:1.45;color:var(--color-text-primary);">${escapeHtml(truncated)}</pre>`;
       container.innerHTML = `
         <div style="background:var(--color-glass);border-radius:var(--radius-md);padding:12px;max-height:320px;overflow:auto;">
-          <pre style="margin:0;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,monospace;font-size:12px;line-height:1.45;color:var(--color-text-primary);">${safe}</pre>
+          ${rendered}
         </div>`;
     } else {
       container.innerHTML = `

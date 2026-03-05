@@ -78,6 +78,14 @@ export function renderScanPage(params) {
   `);
 
   setupScanListeners();
+
+  if (showCamera && store.get('scanAutoStartCamera')) {
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (!scanner.isScanning) toggleScanner();
+      }, 80);
+    });
+  }
 }
 
 function setupScanListeners() {

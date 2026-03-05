@@ -22,9 +22,14 @@ export function showToast(message, type = 'info', duration = 3000) {
   toast.innerHTML = `<span>${icons[type] || ''}</span><span>${escapeHtml(message)}</span>`;
   container.appendChild(toast);
 
-  setTimeout(() => {
+  const dismiss = () => {
     toast.classList.add('fade-out');
-    setTimeout(() => toast.remove(), 300);
+    setTimeout(() => toast.remove(), 220);
+  };
+  toast.addEventListener('click', dismiss);
+
+  setTimeout(() => {
+    dismiss();
   }, duration);
 }
 
