@@ -36,7 +36,7 @@ export function renderScanPage(params) {
     <div class="scanner-container" id="scanner-container">
       <div id="scanner-video"></div>
       <div class="scanner-overlay">
-        <div class="scan-line"></div>
+        <div class="scanner-frame"></div>
       </div>
     </div>
 
