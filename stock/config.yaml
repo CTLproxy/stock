@@ -1,6 +1,6 @@
 name: Stock — Grocy PWA
 description: A modern Progressive Web App client for Grocy grocery management
-version: 1.0.17
+version: 1.0.18
 slug: grocy-stock-pwa
 url: https://github.com/CTLproxy/stock
 documentation: https://github.com/CTLproxy/stock/blob/main/stock/README.md

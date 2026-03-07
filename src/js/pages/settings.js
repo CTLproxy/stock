@@ -225,7 +225,7 @@ export function renderSettings() {
       <div class="settings-list">
         <div class="settings-item">
           <span>Stock PWA</span>
-          <span class="text-secondary">v1.0.17</span>
+          <span class="text-secondary">v1.0.18</span>
         </div>
         <div class="settings-item">
           <span>Built for</span>

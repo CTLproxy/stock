@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.17
+## 1.0.18
 
 - Equipment: add tiny markdown renderer for `.md` preview (headings/lists/paragraphs)
 - Equipment: keep lightweight TXT preview and improve in-app file opening fallbacks
