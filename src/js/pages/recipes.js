@@ -31,6 +31,7 @@ export function renderRecipes() {
       <button class="tab-btn tab-btn-active" data-filter="all">All</button>
       <button class="tab-btn" data-filter="available">✓ Can Cook</button>
       <button class="tab-btn" data-filter="missing">✕ Missing</button>
+      <button class="tab-btn" id="open-meal-planner">Meal Planner</button>
     </div>
 
     <div id="recipes-count" class="text-secondary mb-md" style="font-size: 13px; padding: 0 4px;"></div>
@@ -44,6 +45,10 @@ export function renderRecipes() {
 
   loadRecipesData();
   setRefreshHandler(loadRecipesData);
+
+  document.getElementById('open-meal-planner')?.addEventListener('click', () => {
+    location.hash = '/meal-planner';
+  });
 }
 
 async function loadRecipesData() {
@@ -113,7 +118,9 @@ function applyFilters() {
   } else if (_activeFilter === 'missing') {
     filtered = filtered.filter(r => {
       const f = _fulfillmentMap[r.id];
-      return !f || (f.recipe_fulfilled != 1 && f.recipe_fulfilled !== true);
+      if (!f) return true;
+      if (isRecipeWithoutIngredients(f)) return false;
+      return f.recipe_fulfilled != 1 && f.recipe_fulfilled !== true;
     });
   }
 
@@ -176,6 +183,8 @@ function renderRecipesList(items) {
     if (f) {
       if (f.recipe_fulfilled == 1 || f.recipe_fulfilled === true) {
         badge = '<span class="ingredient-badge ingredient-badge-ok" style="position:static;display:inline-flex;margin-left:6px;width:20px;height:20px;font-size:11px;" title="All ingredients available">✓</span>';
+      } else if (isRecipeWithoutIngredients(f)) {
+        badge = '<span class="ingredient-badge ingredient-badge-neutral" style="position:static;display:inline-flex;margin-left:6px;width:20px;height:20px;font-size:11px;" title="No ingredients configured">•</span>';
       } else {
         const mc = f.missing_products_count || '!';
         badge = `<span class="ingredient-badge ingredient-badge-missing" style="position:static;display:inline-flex;margin-left:6px;width:20px;height:20px;font-size:11px;" title="${mc} missing">${mc}</span>`;
@@ -195,4 +204,11 @@ function renderRecipesList(items) {
       </div>
     `;
   }).join('');
+}
+
+function isRecipeWithoutIngredients(fulfillment) {
+  if (!fulfillment) return false;
+  const isFulfilled = fulfillment.recipe_fulfilled == 1 || fulfillment.recipe_fulfilled === true;
+  const missingCount = Number(fulfillment.missing_products_count || 0);
+  return !isFulfilled && missingCount === 0;
 }

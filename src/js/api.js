@@ -1097,6 +1097,52 @@ class GrocyAPI {
     return this._request('POST', `/recipes/${recipeId}/consume`);
   }
 
+  async getMealPlanEntries(fromDate = '', toDate = '') {
+    const buildQuery = (field) => {
+      const queries = [];
+      if (fromDate) queries.push(`${field}>=${fromDate}`);
+      if (toDate) queries.push(`${field}<=${toDate}`);
+      return queries
+        .map(q => `query[]=${encodeURIComponent(q)}`)
+        .join('&');
+    };
+
+    try {
+      return await this.getObjects('meal_plan', buildQuery('day'));
+    } catch (e) {
+      const msg = String(e?.message || '').toLowerCase();
+      if (!msg.includes('day')) throw e;
+    }
+
+    try {
+      return await this.getObjects('meal_plan', buildQuery('date'));
+    } catch {
+      return this.getObjects('meal_plan');
+    }
+  }
+
+  async createMealPlanEntry(data) {
+    const payload = { ...data };
+    try {
+      return await this.addObject('meal_plan', payload);
+    } catch (e) {
+      if (payload.day && !payload.date) {
+        const fallback = { ...payload, date: payload.day };
+        delete fallback.day;
+        return this.addObject('meal_plan', fallback);
+      }
+      throw e;
+    }
+  }
+
+  async updateMealPlanEntry(id, data) {
+    return this.editObject('meal_plan', id, data);
+  }
+
+  async deleteMealPlanEntry(id) {
+    return this.deleteObject('meal_plan', id);
+  }
+
   async createRecipe(data) {
     return this.addObject('recipes', data);
   }

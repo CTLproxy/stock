@@ -367,6 +367,35 @@ function setupSettingsListeners() {
     }
   };
 
+  const isAppServerAvailableForUpdate = async () => {
+    if (!navigator.onLine) return false;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const basePath = (window.location.pathname || '/').replace(/\/$/, '/');
+    const probeUrl = `${window.location.origin}${basePath}?update_probe=${Date.now()}`;
+
+    try {
+      const response = await fetch(probeUrl, {
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'same-origin',
+        headers: {
+          'Cache-Control': 'no-cache',
+          Pragma: 'no-cache',
+        },
+        signal: controller.signal,
+      });
+      if (!response.ok) return false;
+      const ct = (response.headers.get('content-type') || '').toLowerCase();
+      return ct.includes('text/html') || ct.includes('application/xhtml');
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+
   document.getElementById('settings-open-external')?.addEventListener('click', async () => {
     const url = getAppLaunchUrl();
     let opened = false;
@@ -641,6 +670,12 @@ function setupSettingsListeners() {
 
   // Update SW
   document.getElementById('settings-refresh-sw')?.addEventListener('click', async () => {
+    const serverReady = await isAppServerAvailableForUpdate();
+    if (!serverReady) {
+      showToast('Update canceled: app server is not reachable. Current version kept.', 'warning');
+      return;
+    }
+
     try {
       if ('serviceWorker' in navigator && navigator.serviceWorker) {
         const registrations = await navigator.serviceWorker.getRegistrations();
@@ -650,7 +685,10 @@ function setupSettingsListeners() {
           return;
         }
       }
-    } catch (_) { /* SW not available (HTTP) — fall through */ }
+    } catch (_) {
+      showToast('Update check failed. Current version kept.', 'warning');
+      return;
+    }
 
     // Fallback: clear caches if available, then hard-reload
     try {
@@ -658,7 +696,16 @@ function setupSettingsListeners() {
         const keys = await caches.keys();
         await Promise.all(keys.map(k => caches.delete(k)));
       }
-    } catch (_) { /* ignore */ }
+    } catch (_) {
+      showToast('Could not prepare update. Current version kept.', 'warning');
+      return;
+    }
+
+    const stillReady = await isAppServerAvailableForUpdate();
+    if (!stillReady) {
+      showToast('Update canceled: app server became unreachable. Current version kept.', 'warning');
+      return;
+    }
 
     showToast('Reloading app…', 'info');
     setTimeout(() => window.location.reload(), 400);

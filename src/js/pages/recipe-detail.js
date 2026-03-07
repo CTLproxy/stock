@@ -7,6 +7,12 @@ import {
   escapeHtml, formatAmount,
 } from '../ui.js';
 import { setRefreshHandler } from '../pull-to-refresh.js';
+import {
+  MEAL_TYPE_OPTIONS,
+  parseRecipeMealTypes,
+  stripMealTypeMarker,
+  buildDescriptionWithMealTypes,
+} from '../recipe-meal-tags.js';
 
 let _recipe = null;
 let _ingredients = [];
@@ -98,12 +104,14 @@ export async function renderRecipeCreate() {
 function renderView() {
   const fulfilled = _fulfillment?.recipe_fulfilled ?? null;
   const missingCount = _fulfillment?.missing_products_count ?? null;
+  const recipeMealTypes = parseRecipeMealTypes(_recipe.description || '');
 
   renderPage(`
     <div class="detail-hero">
       <div class="detail-emoji">🍴</div>
       <div class="detail-name">${escapeHtml(_recipe.name)}</div>
       ${_recipe.base_servings ? `<div class="detail-subtitle">${_recipe.base_servings} serving${_recipe.base_servings != 1 ? 's' : ''}</div>` : ''}
+      ${recipeMealTypes.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:8px;">${recipeMealTypes.map(type => `<span class="meal-type-chip">${type.charAt(0).toUpperCase() + type.slice(1)}</span>`).join('')}</div>` : ''}
     </div>
 
     ${fulfilled !== null ? `
@@ -146,7 +154,7 @@ function renderView() {
     ${_recipe.description ? `
       <div class="section">
         <div class="section-title">Description</div>
-        <div class="card" style="padding: 12px; white-space: pre-wrap;">${escapeHtml(_recipe.description)}</div>
+        <div class="card" style="padding: 12px; white-space: pre-wrap;">${escapeHtml(stripMealTypeMarker(_recipe.description))}</div>
       </div>
     ` : ''}
 
@@ -433,6 +441,8 @@ function confirmDeleteIngredient(ingId) {
    ================================================================= */
 function renderEditForm(data) {
   setHeader(_isNew ? 'New Recipe' : 'Edit Recipe', true);
+  const selectedMealTypes = parseRecipeMealTypes(data.description || '');
+  const visibleDescription = stripMealTypeMarker(data.description || '');
 
   renderPage(`
     <div class="section">
@@ -443,7 +453,19 @@ function renderEditForm(data) {
 
       <div class="form-group">
         <label class="form-label">Description / Instructions</label>
-        <textarea id="recipe-description" class="form-input" rows="6" placeholder="Recipe steps, notes...">${escapeHtml(data.description || '')}</textarea>
+        <textarea id="recipe-description" class="form-input" rows="6" placeholder="Recipe steps, notes...">${escapeHtml(visibleDescription)}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Meal Type Tags</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${MEAL_TYPE_OPTIONS.map(type => `
+            <label class="btn btn-secondary btn-sm" style="gap:6px;cursor:pointer;">
+              <input type="checkbox" class="recipe-meal-type" value="${type}" ${selectedMealTypes.includes(type) ? 'checked' : ''}>
+              ${type.charAt(0).toUpperCase() + type.slice(1)}
+            </label>
+          `).join('')}
+        </div>
       </div>
 
       <div class="form-group">
@@ -476,9 +498,14 @@ async function saveRecipe() {
 
   const payload = {
     name,
-    description: document.getElementById('recipe-description')?.value?.trim() || '',
+    description: '',
     base_servings: parseInt(document.getElementById('recipe-servings')?.value) || 1,
   };
+
+  const selectedMealTypes = Array.from(document.querySelectorAll('.recipe-meal-type:checked'))
+    .map(el => el.value);
+  const description = document.getElementById('recipe-description')?.value?.trim() || '';
+  payload.description = buildDescriptionWithMealTypes(description, selectedMealTypes);
 
   const btn = document.getElementById('btn-save');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving\u2026'; }

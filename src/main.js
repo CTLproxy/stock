@@ -24,6 +24,7 @@ import { renderEquipment } from './js/pages/equipment.js';
 import { renderEquipmentDetail, renderEquipmentCreate } from './js/pages/equipment-detail.js';
 import { renderRecipes } from './js/pages/recipes.js';
 import { renderRecipeDetail, renderRecipeCreate } from './js/pages/recipe-detail.js';
+import { renderMealPlanner } from './js/pages/meal-planner.js';
 import { renderMasterData } from './js/pages/master-data.js';
 import { initPullToRefresh } from './js/pull-to-refresh.js';
 
@@ -258,6 +259,11 @@ function registerRoutes() {
   router.register('/recipes', () => {
     setActiveNav('/mode');
     renderRecipes();
+  });
+
+  router.register('/meal-planner', () => {
+    setActiveNav('/mode');
+    renderMealPlanner();
   });
 
   router.register('/recipe/new', () => {
